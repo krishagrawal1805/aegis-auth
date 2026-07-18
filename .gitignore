@@ -23,4 +23,7 @@ Thumbs.db
 # Logs
 *.log
 
+# Presentation scripts
+demo_script.md
+
 # Package lock files (keep only root)
