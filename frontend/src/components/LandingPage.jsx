@@ -459,7 +459,7 @@ const LandingPage = ({ onNavigate }) => {
               </div>
               <div className="border border-zinc-800 bg-zinc-950 p-4 rounded-lg">
                 <span className="text-xs text-zinc-500 block mb-1">ACTIVE IDENTITY SESSION</span>
-                <span className="text-lg font-semibold text-zinc-200">Alice (SeniorAdmin)</span>
+                <span className="text-lg font-semibold text-zinc-200">Alice (Admin)</span>
                 <span className="text-[11px] text-zinc-500 block mt-1">Role-based Access Clearance</span>
               </div>
               <div className="border border-zinc-800 bg-zinc-950 p-4 rounded-lg">

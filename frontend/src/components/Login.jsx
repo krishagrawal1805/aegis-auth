@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 const Login = ({ onNavigate, onBackToHome }) => {
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
+  const [workspaceCode, setWorkspaceCode] = useState('');
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationCode, setVerificationCode] = useState(null);
@@ -22,16 +23,35 @@ const Login = ({ onNavigate, onBackToHome }) => {
     e.preventDefault();
     setLoading(true);
     setStatus('Initializing passwordless challenge...');
+
+    const code = workspaceCode.trim().toUpperCase();
+    if (code.length !== 6) {
+      setStatus('Error: Workspace code must be exactly 6 characters');
+      setLoading(false);
+      return;
+    }
+
     try {
+      // Store workspaceCode so apiFetch attaches it
+      localStorage.setItem('workspaceCode', code);
+
       // 1. Fetch passkey credentials options and temporary session token from backend
-      const optionsRes = await api.post('/auth/login/challenge', { email, sessionId });
+      const optionsRes = await api.post('/auth/login/challenge', { email, sessionId, workspaceCode: code });
       
       const challengeData = optionsRes.data;
+      if (!optionsRes.ok) {
+        throw new Error(challengeData.error || 'User or workspace not found');
+      }
+
       setVerificationCode(challengeData.verificationCode);
       setChallengeOptions(challengeData);
 
-      // 2. Open cross-device active SSE event stream to listen for remote validation events
-      const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/events?sessionId=${sessionId}`, { withCredentials: true });
+      // 2. Open cross-device active SSE event stream
+      // Pass workspaceCode in query since EventSource cannot send custom headers
+      const eventSource = new EventSource(
+        `${import.meta.env.VITE_API_URL}/events?sessionId=${sessionId}&workspaceCode=${code}`, 
+        { withCredentials: true }
+      );
       setActiveEventSource(eventSource);
 
       setStatus('Cross-device SSE stream connected. Awaiting device biometric authorization...');
@@ -46,7 +66,8 @@ const Login = ({ onNavigate, onBackToHome }) => {
           // 3. Trade the exchange token for an HttpOnly cookie
           const verifyRes = await api.post('/auth/session/exchange', {
             sessionId,
-            exchangeToken: payload.exchangeToken
+            exchangeToken: payload.exchangeToken,
+            workspaceCode: code
           });
 
           if (verifyRes.data.success) {
@@ -64,26 +85,28 @@ const Login = ({ onNavigate, onBackToHome }) => {
         if (localAuthStarted) return;
         localAuthStarted = true;
         // If SSE fails, fallback to local biometric prompt
-        handleLocalAuthentication(challengeData.options, challengeData.verificationCode);
+        handleLocalAuthentication(challengeData.options, challengeData.verificationCode, code);
       };
 
     } catch (error) {
+      localStorage.removeItem('workspaceCode');
       setStatus(`Error: ${error.message}`);
       setLoading(false);
     }
   };
 
-  // Fallback if cross-device SSE fails or user prefers to use the local machine's passkey
-  const handleLocalAuthentication = async (options, code) => {
+  // Fallback if cross-device SSE fails or user prefers local login
+  const handleLocalAuthentication = async (options, code, wsCode) => {
     try {
       setStatus('Please authenticate with this device...');
       const assertion = await startAuthentication(options);
 
       const verifyRes = await api.post('/auth/login/verify', {
         email,
-        selectedCode: code, // Use the passed code directly to avoid React state delay
+        selectedCode: code,
         authenticationResponse: assertion,
-        isLocal: true
+        isLocal: true,
+        workspaceCode: wsCode
       });
 
       if (verifyRes.data.success) {
@@ -102,8 +125,9 @@ const Login = ({ onNavigate, onBackToHome }) => {
     if (activeEventSource) {
       activeEventSource.close();
     }
+    const code = workspaceCode.trim().toUpperCase();
     if (challengeOptions) {
-      handleLocalAuthentication(challengeOptions.options, challengeOptions.verificationCode);
+      handleLocalAuthentication(challengeOptions.options, challengeOptions.verificationCode, code);
     }
   };
 
@@ -140,6 +164,15 @@ const Login = ({ onNavigate, onBackToHome }) => {
       ) : (
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <input 
+            type="text" 
+            placeholder="Workspace Code (6 chars)" 
+            value={workspaceCode} 
+            onChange={(e) => setWorkspaceCode(e.target.value)}
+            required 
+            maxLength={6}
+            style={{ padding: '0.8rem', borderRadius: '8px', border: 'none', textTransform: 'uppercase' }}
+          />
+          <input 
             type="email" 
             placeholder="Email Address" 
             value={email} 
@@ -156,7 +189,7 @@ const Login = ({ onNavigate, onBackToHome }) => {
       {!verificationCode && (
         <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
           <p>
-            New device? <span style={{ color: '#2563eb', cursor: 'pointer' }} onClick={onNavigate}>Register here</span>
+            New device? <span style={{ color: '#38bdf8', cursor: 'pointer' }} onClick={onNavigate}>Register here</span>
           </p>
           <span 
             className="cursor-pointer text-zinc-500 hover:text-zinc-300 text-xs mt-1 transition-colors"

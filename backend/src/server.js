@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { connectDB } from './config/db.js';
+import { resolveTenant } from './middlewares/tenantMiddleware.js';
 
 // Route Imports
 import authRoutes from './routes/authRoutes.js';
@@ -26,6 +27,9 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+
+// Resolve multi-tenant context globally for API routes
+app.use('/api', resolveTenant);
 
 // Mount Routes
 app.use('/api/auth', authRoutes);

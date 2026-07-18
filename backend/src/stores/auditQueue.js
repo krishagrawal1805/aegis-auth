@@ -1,7 +1,6 @@
-import crypto from 'crypto';
-import AuditLog from '../models/AuditLog.js';
+import { AuditLog } from '../models/models.js';
 
-// In-Memory Sequential Queue to prevent MongoDB Unique Index Deadlocks
+// In-Memory Queue to process audit logs sequentially and prevent concurrent insertion conflicts
 const queue = [];
 let isProcessing = false;
 
@@ -12,28 +11,21 @@ const processQueue = async () => {
   while (queue.length > 0) {
     const event = queue.shift();
     try {
-      // 1. Fetch the most recent log to continue the cryptographic chain
-      const lastLog = await AuditLog.findOne().sort({ timestamp: -1 });
-      const previousBlockHash = lastLog
-        ? lastLog.currentBlockHash
-        : '0000000000000000000000000000000000000000000000000000000000000000'; // Genesis hash
-
-      // 2. Hash the new event payload with the previous block hash
-      const dataString = JSON.stringify({
-        eventType: event.eventType,
-        description: event.description,
-        approvalRequestId: event.approvalRequestId || null,
-        previousBlockHash
+      const timestamp = new Date();
+      const logEntry = new AuditLog({
+        org_id: event.org_id,
+        actor_id: event.actor_id,
+        action: event.action,
+        timestamp,
+        payload: event.payload || {},
+        hmac_signature: 'PENDING' // Placeholder to satisfy requirement before generation
       });
-      
-      const currentBlockHash = crypto.createHash('sha256').update(dataString).digest('hex');
 
-      // 3. Write to DB
-      await AuditLog.create({
-        ...event,
-        previousBlockHash,
-        currentBlockHash
-      });
+      // Generate the deterministic row-level HMAC signature
+      const serverSecret = process.env.HMAC_SECRET || 'aegis-hackathon-super-secret-audit-key-2026';
+      logEntry.hmac_signature = logEntry.generateHmac(serverSecret);
+
+      await logEntry.save();
     } catch (error) {
       console.error('[AuditQueue] Error processing audit event:', error);
     }

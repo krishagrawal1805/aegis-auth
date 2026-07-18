@@ -26,7 +26,8 @@ const Approvals = () => {
     fetchPending();
 
     // Listen for live approval updates
-    const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/events`, { withCredentials: true });
+    const wsCode = localStorage.getItem('workspaceCode') || '';
+    const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/events?workspaceCode=${wsCode}`, { withCredentials: true });
 
     eventSource.onmessage = (event) => {
       const payload = JSON.parse(event.data);
@@ -56,7 +57,7 @@ const Approvals = () => {
       const payload = {
         approvalRequestId: request._id,
         deviceCredentialId: assertion.id,
-        signatureValue: JSON.stringify(assertion.response),
+        signatureValue: JSON.stringify(assertion),
       };
 
       const { data, ok } = await api.post('/approvals/sign', payload);

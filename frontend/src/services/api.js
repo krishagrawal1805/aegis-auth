@@ -7,10 +7,13 @@ const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const apiFetch = async (endpoint, options = {}) => {
   const url = `${BASE_URL}${endpoint}`;
 
+  const workspaceCode = localStorage.getItem('workspaceCode');
+  
   const config = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(workspaceCode ? { 'X-Workspace-Code': workspaceCode } : {}),
       ...options.headers,
     },
     credentials: 'include', // CRITICAL: Ensures HttpOnly cookies are sent

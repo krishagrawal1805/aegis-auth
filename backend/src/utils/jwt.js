@@ -3,8 +3,8 @@ import jwt from 'jsonwebtoken';
 // Use env variable or fallback for hackathon development ease
 const SECRET = process.env.JWT_SECRET || 'aegis-hackathon-super-secret-key-2026';
 
-export const generateToken = (userId, role) => {
-  return jwt.sign({ userId, role }, SECRET, { expiresIn: '12h' });
+export const generateToken = (userId, role, orgId) => {
+  return jwt.sign({ userId, role, orgId }, SECRET, { expiresIn: '12h' });
 };
 
 export const verifyToken = (token) => {

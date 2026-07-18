@@ -12,7 +12,11 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('approvals'); // 'approvals' | 'audit'
 
   useEffect(() => {
-    const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/events`, { withCredentials: true });
+    const wsCode = localStorage.getItem('workspaceCode') || '';
+    const eventSource = new EventSource(
+      `${import.meta.env.VITE_API_URL}/events?workspaceCode=${wsCode}`, 
+      { withCredentials: true }
+    );
 
     eventSource.onmessage = (event) => {
       const payload = JSON.parse(event.data);
@@ -31,10 +35,12 @@ const Dashboard = () => {
       const assertion = await startAuthentication(authPrompt.options);
       setProcessStatus('Transmitting secure payload...');
 
+      const wsCode = localStorage.getItem('workspaceCode') || '';
       const { data: verifyData, ok: verifyOk } = await api.post('/auth/login/verify', {
         email: authPrompt.email,
         selectedCode,
-        authenticationResponse: assertion
+        authenticationResponse: assertion,
+        workspaceCode: wsCode
       });
 
       if (verifyOk) {
@@ -65,7 +71,12 @@ const Dashboard = () => {
       <div className="glass-panel" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h3 style={{ color: '#e2e8f0', fontSize: '1.2rem' }}>Identity Validated</h3>
-          <p style={{ color: '#94a3b8', marginTop: '0.2rem' }}>{user.displayName} ({user.email})</p>
+          <p style={{ color: '#94a3b8', marginTop: '0.2rem' }}>{user.display_name || user.displayName} ({user.email})</p>
+          {user.org_id && (
+            <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.4rem' }}>
+              Workspace: <strong style={{ color: '#818cf8' }}>{user.org_id.name}</strong> ({user.org_id.workspace_code})
+            </p>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           <p style={{ color: '#cbd5e1', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.2rem' }}>Clearance Level</p>

@@ -86,17 +86,18 @@ async function runSimulation() {
     });
     await delay(1500);
 
+    await pageA.type('input[placeholder="Workspace Code (e.g. ORG123)"]', 'SIMORG');
     await pageA.type('input[placeholder="Email Address"]', emailB);
-    await pageA.type('input[placeholder="Display Name"]', 'Admin B (LeadDev)');
-    await pageA.select('select', 'LeadDev');
+    await pageA.type('input[placeholder="Display Name"]', 'Admin B (Approver)');
+    await pageA.select('select', 'Approver');
     await pageA.click('button[type="submit"]');
     
     console.log('[Simulation] Waiting for Browser A registration redirect...');
     await pageA.waitForFunction(
-      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('LeadDev'),
+      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('Approver'),
       { timeout: 15000 }
     );
-    console.log('[Simulation] Admin B (LeadDev) registered successfully on Browser A.');
+    console.log('[Simulation] Admin B (Approver) registered successfully on Browser A.');
 
     // 4. Register Admin A (SeniorAdmin) on Browser B
     const emailA = `admin_a_${Date.now()}@aegis.local`;
@@ -108,17 +109,18 @@ async function runSimulation() {
     });
     await delay(1500);
 
+    await pageB.type('input[placeholder="Workspace Code (e.g. ORG123)"]', 'SIMORG');
     await pageB.type('input[placeholder="Email Address"]', emailA);
-    await pageB.type('input[placeholder="Display Name"]', 'Admin A (SeniorAdmin)');
-    await pageB.select('select', 'SeniorAdmin');
+    await pageB.type('input[placeholder="Display Name"]', 'Admin A (Admin)');
+    await pageB.select('select', 'Admin');
     await pageB.click('button[type="submit"]');
     
     console.log('[Simulation] Waiting for Browser B registration redirect...');
     await pageB.waitForFunction(
-      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('SeniorAdmin'),
+      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('Admin'),
       { timeout: 15000 }
     );
-    console.log('[Simulation] Admin A (SeniorAdmin) registered successfully on Browser B.');
+    console.log('[Simulation] Admin A (Admin) registered successfully on Browser B.');
 
     // 5. Log out Admin B from Browser A to prepare for cross-device check...
     console.log('[Simulation] Logging out Admin B on Browser A to prepare for cross-device check...');
@@ -140,6 +142,7 @@ async function runSimulation() {
 
     // 6. Initiate login for Admin A on Browser A (Cross-Device Flow)
     console.log(`[Simulation] Initiating cross-device login for Admin A (${emailA}) on Browser A...`);
+    await pageA.type('input[placeholder="Workspace Code (6 chars)"]', 'SIMORG');
     await pageA.type('input[placeholder="Email Address"]', emailA);
     await pageA.click('button[type="submit"]');
     await delay(4000);
@@ -175,7 +178,7 @@ async function runSimulation() {
     // Confirm Browser A logins successfully
     console.log('[Simulation] Verifying Browser A logged in automatically...');
     await pageA.waitForFunction(
-      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('SeniorAdmin'),
+      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('Admin'),
       { timeout: 15000 }
     );
     console.log('[Simulation] Browser A successfully logged in via cross-device verification.');
@@ -211,12 +214,13 @@ async function runSimulation() {
     pageA.on('request', interceptEventsA);
 
     console.log(`[Simulation] Logging in Admin B (${emailB}) locally on Browser A...`);
+    await pageA.type('input[placeholder="Workspace Code (6 chars)"]', 'SIMORG');
     await pageA.type('input[placeholder="Email Address"]', emailB);
     await pageA.click('button[type="submit"]');
 
     console.log('[Simulation] Waiting for Browser A local login...');
     await pageA.waitForFunction(
-      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('LeadDev'),
+      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('Approver'),
       { timeout: 15000 }
     );
     console.log('[Simulation] Admin B logged in locally on Browser A successfully.');
@@ -229,21 +233,24 @@ async function runSimulation() {
     console.log('[Simulation] Reloading Browser A to establish logged-in SSE connection...');
     await pageA.reload();
     await pageA.waitForFunction(
-      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('LeadDev'),
+      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('Approver'),
       { timeout: 10000 }
     );
     await delay(3000);
 
     // At this stage:
-    // Browser A is logged in as Admin B (LeadDev, and has LeadDev's credential)
-    // Browser B is logged in as Admin A (SeniorAdmin, and has SeniorAdmin's credential)
+    // Browser A is logged in as Admin B (Approver, and has Approver's credential)
+    // Browser B is logged in as Admin A (Admin, and has Admin's credential)
 
     // 10. Trigger a Database Drop request via Browser B evaluate (Admin A)
     console.log('[Simulation] Triggering Production Database Wipe request from Browser B...');
     const requestResult = await pageB.evaluate(() => {
       return fetch('http://localhost:8000/api/approvals/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Workspace-Code': 'SIMORG'
+        },
         credentials: 'include', // CRITICAL for cross-origin cookies!
         body: JSON.stringify({
           resourceName: 'Production Database Wipe (PROD-DB-01)',
@@ -260,7 +267,7 @@ async function runSimulation() {
       { timeout: 10000 }
     );
     
-    console.log('[Simulation] Signing on Browser A (Admin B - LeadDev)...');
+    console.log('[Simulation] Signing on Browser A (Admin B - Approver)...');
     await pageA.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
       const signBtn = buttons.find(b => b.innerText.includes('Sign & Approve'));
@@ -274,7 +281,7 @@ async function runSimulation() {
       { timeout: 10000 }
     );
 
-    console.log('[Simulation] Signing on Browser B (Admin A - SeniorAdmin)...');
+    console.log('[Simulation] Signing on Browser B (Admin A - Admin)...');
     await pageB.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
       const signBtn = buttons.find(b => b.innerText.includes('Sign & Approve'));
