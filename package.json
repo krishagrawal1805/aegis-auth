@@ -1,0 +1,18 @@
+{
+  "name": "aegis-auth",
+  "version": "1.0.0",
+  "description": "Aegis Authentication Platform Monorepo",
+  "type": "module",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.3.0"
+  }
+}

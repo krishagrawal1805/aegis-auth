@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aegis - Enterprise Security</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    /* SENTINEL ATMOSPHERE: Pitch black, high contrast */
+    :root {
+      --bg-dark: #000000;
+      --bg-card: #0a0a0a;
+      --border-subtle: #222222;
+      --border-hover: #333333;
+      --text-main: #ededed;
+      --text-muted: #888888;
+      --accent-neon: #00ff66; /* Sentinel aggressive green */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      /* LINEAR / VERCEL TYPOGRAPHY: Clean sans-serif, precise rendering */
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+      padding: 4rem 2rem;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(0, 255, 102, 0.05) 0%, transparent 40%),
+        linear-gradient(to right, #111 1px, transparent 1px),
+        linear-gradient(to bottom, #111 1px, transparent 1px);
+      background-size: 100% 100%, 40px 40px, 40px 40px;
+    }
+
+    .container {
+      max-width: 1100px;
+      width: 100%;
+    }
+
+    /* HERO SECTION */
+    .hero {
+      text-align: center;
+      margin-bottom: 5rem;
+    }
+
+    .hero h1 {
+      font-size: 4rem;
+      font-weight: 700;
+      letter-spacing: -0.04em; /* Linear style tight tracking */
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 span {
+      color: var(--accent-neon);
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto;
+      letter-spacing: -0.01em;
+    }
+
+    /* KEY BENEFITS BENTO GRID */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1.2fr;
+      gap: 1.5rem;
+    }
+
+    .bento-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bento-card:hover {
+      border-color: var(--border-hover);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+    }
+
+    .card-text {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+
+    /* NIMBUS COMPONENTS (Reskinned for Sentinel) */
+    .mock-ui {
+      background: #000;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: auto;
+    }
+
+    .code-block {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .code-line { margin-bottom: 0.5rem; }
+    .code-keyword { color: #a78bfa; }
+    .code-string { color: var(--accent-neon); }
+    .code-comment { color: #555; }
+
+    /* Policy List Component */
+    .policy-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .policy-item:last-child { border-bottom: none; }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-neon);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-neon);
+    }
+
+    /* Center Abstract Graphic */
+    .center-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #111 0%, #000 100%);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .abstract-shield {
+      width: 150px;
+      height: 150px;
+      border: 1px solid rgba(0, 255, 102, 0.3);
+      border-radius: 20px;
+      transform: rotate(45deg);
+      position: relative;
+      box-shadow: inset 0 0 40px rgba(0, 255, 102, 0.1);
+      animation: pulse 4s infinite alternate;
+    }
+
+    .abstract-shield::before {
+      content: '';
+      position: absolute;
+      inset: 20px;
+      border: 1px solid rgba(0, 255, 102, 0.6);
+      border-radius: 8px;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: inset 0 0 20px rgba(0, 255, 102, 0.05); }
+      100% { box-shadow: inset 0 0 60px rgba(0, 255, 102, 0.2); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header class="hero">
+      <h1>Protect your <span>infrastructure</span>.</h1>
+      <p>Modern encryption and compliance controls without slowing your engineering team down.</p>
+    </header>
+
+    <div class="bento-grid">
+      
+      <!-- Left Card: Nimbus style code component -->
+      <div class="bento-card">
+        <h3 class="card-title">Fail-open architecture</h3>
+        <p class="card-text">Cryptographic keys, engine, and identities remain completely isolated.</p>
+        
+        <div class="mock-ui code-block">
+          <div class="code-line"><span class="code-comment">// Authenticate session</span></div>
+          <div class="code-line"><span class="code-keyword">const</span> token = <span class="code-keyword">await</span> aegis.auth({</div>
+          <div class="code-line">&nbsp;&nbsp;resource: <span class="code-string">"prod-db"</span>,</div>
+          <div class="code-line">&nbsp;&nbsp;strict: <span class="code-keyword">true</span></div>
+          <div class="code-line">});</div>
+        </div>
+      </div>
+
+      <!-- Center Card: Abstract 3D/Atmospheric anchor -->
+      <div class="bento-card center-card">
+        <div class="abstract-shield"></div>
+      </div>
+
+      <!-- Right Card: Nimbus style policy UI -->
+      <div class="bento-card">
+        <h3 class="card-title">Native compliance</h3>
+        <p class="card-text">Role-based access and M-of-N threshold signatures out of the box.</p>
+        
+        <div class="mock-ui">
+          <div class="policy-item">
+            <div class="status-dot"></div>
+            SOC 2 Compliance Engine
+          </div>
+          <div class="policy-item">
+            <div class="status-dot"></div>
+            Zero-Trust Key Management
+          </div>
+          <div class="policy-item">
+            <div class="status-dot"></div>
+            Cryptographic Audit Ledger
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>
