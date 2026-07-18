@@ -292,7 +292,7 @@ fetch('http://localhost:8000/api/approvals/request', {
 
 ## Team
 
-Built by **Krishna & Kamya**
+Built by **Krish Agrawal & Krishna Arora**
 
 ---
 
