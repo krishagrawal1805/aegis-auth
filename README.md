@@ -149,6 +149,7 @@ aegis-auth/
 │
 ├── .gitignore
 ├── package.json                       # Root monorepo scripts
+├── simulate.js                        # E2E WebAuthn & SSE flow simulation script
 └── README.md
 ```
 
@@ -291,7 +292,7 @@ fetch('http://localhost:8000/api/approvals/request', {
 
 ## Team
 
-Built by **DevOps-Tally**
+Built by **Krishna & Kamya**
 
 ---
 
