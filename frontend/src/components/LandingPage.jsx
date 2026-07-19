@@ -1,31 +1,83 @@
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Shield, Key, Cpu, Server, CheckCircle, Fingerprint, Lock, 
+  RefreshCw, Globe, Users, Check, ChevronDown, HelpCircle, 
+  ArrowRight, Activity, Terminal, AlertCircle, FileText
+} from 'lucide-react';
 
 const LandingPage = ({ onNavigate }) => {
-  const [activeLink, setActiveLink] = useState('Home');
   const [email, setEmail] = useState('');
   const [demoState, setDemoState] = useState('EMAIL_INPUT');
   const [selectedNumber, setSelectedNumber] = useState(null);
-  const [verificationCode] = useState(76);
-  const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
+  const [verificationCode] = useState(48);
   const [biometricProgress, setBiometricProgress] = useState(0);
+  const [faqOpen, setFaqOpen] = useState({});
 
-  // Handle Mouse Spotlight Effect
-  const handleMouseMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setMouseCoords({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    });
-  };
+  // Loop simulation step tracking
+  const [simStep, setSimStep] = useState(0);
+  const [simEmail, setSimEmail] = useState('');
+  const [simFingerprintScan, setSimFingerprintScan] = useState(0);
 
-  // Handle email submit to transition to number matching
+  // Automatic looped simulation for the hero animation
+  useEffect(() => {
+    let timer;
+    const runAnimationLoop = async () => {
+      // Step 0: Idle/Reset
+      setSimStep(0);
+      setSimEmail('');
+      setSimFingerprintScan(0);
+      await new Promise(r => setTimeout(r, 1500));
+
+      // Step 1: User requests login (Typing animation)
+      setSimStep(1);
+      const targetEmail = 'admin@aegis.corp';
+      for (let i = 0; i <= targetEmail.length; i++) {
+        setSimEmail(targetEmail.substring(0, i));
+        await new Promise(r => setTimeout(r, 60));
+      }
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Step 2: Challenge generated & sent to device
+      setSimStep(2);
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Step 3: Biometric verification (Scan progress)
+      setSimStep(3);
+      for (let p = 0; p <= 100; p += 5) {
+        setSimFingerprintScan(p);
+        await new Promise(r => setTimeout(r, 50));
+      }
+      await new Promise(r => setTimeout(r, 1000));
+
+      // Step 4: Challenge signed securely in Enclave
+      setSimStep(4);
+      await new Promise(r => setTimeout(r, 1800));
+
+      // Step 5: Verification handshake on server
+      setSimStep(5);
+      await new Promise(r => setTimeout(r, 1800));
+
+      // Step 6: Identity Verified ✓
+      setSimStep(6);
+      await new Promise(r => setTimeout(r, 2200));
+
+      // Loop again
+      runAnimationLoop();
+    };
+
+    runAnimationLoop();
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Sandbox demo logic
   const handleEmailSubmit = (e) => {
     e.preventDefault();
     if (!email) return;
     setDemoState('NUMBER_MATCH');
   };
 
-  // Handle mobile number selection
   const handleNumberSelect = (num) => {
     setSelectedNumber(num);
     if (num === verificationCode) {
@@ -39,7 +91,6 @@ const LandingPage = ({ onNavigate }) => {
     }
   };
 
-  // Biometric progress simulation
   useEffect(() => {
     if (demoState !== 'BIOMETRIC_SCAN') {
       setBiometricProgress(0);
@@ -55,174 +106,621 @@ const LandingPage = ({ onNavigate }) => {
           }, 600);
           return 100;
         }
-        return prev + 4;
+        return prev + 5;
       });
-    }, 80);
+    }, 70);
 
     return () => clearInterval(interval);
   }, [demoState]);
 
-  // Reset demo
-  const resetDemo = () => {
-    setEmail('');
-    setDemoState('EMAIL_INPUT');
-    setSelectedNumber(null);
+  const toggleFaq = (index) => {
+    setFaqOpen(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
+  // Mock statistics gestural chart coordinates
+  const chartPoints = [
+    { x: 10, y: 80 },
+    { x: 25, y: 75 },
+    { x: 40, y: 85 },
+    { x: 55, y: 40 },
+    { x: 70, y: 30 },
+    { x: 85, y: 15 },
+    { x: 100, y: 5 }
+  ];
+
   return (
-    <div 
-      className="min-h-screen bg-zinc-950 text-zinc-50 font-sans selection:bg-blue-600 selection:text-white grid-mesh relative overflow-hidden"
-      onMouseMove={handleMouseMove}
-    >
-      {/* Vercel-style Spotlight Overlay */}
-      <div 
-        className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-300"
-        style={{
-          background: `radial-gradient(800px circle at ${mouseCoords.x}px ${mouseCoords.y}px, rgba(59, 130, 246, 0.06), transparent 80%)`
-        }}
-      />
-
-      {/* Brand Ambient Background Glows */}
-      <div className="absolute top-[20%] left-[-10%] w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[150px] pointer-events-none" />
-      <div className="absolute top-[30%] right-[-10%] w-[650px] h-[650px] bg-blue-600/5 rounded-full blur-[150px] pointer-events-none" />
-
-      {/* Navigation Header */}
-      <header className="border-b border-white/[0.04] bg-zinc-950/40 backdrop-blur-md sticky top-0 z-50 relative">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-white text-ink-black font-sans selection:bg-[#fbe1d1] selection:text-[#5d2a1a] grid-mesh relative">
+      
+      {/* Top Navbar */}
+      <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#ececec]">
+        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span 
-              className="text-2xl tracking-tight text-foreground flex items-center gap-1.5 cursor-default select-none"
-              style={{ fontFamily: "'Instrument Serif', serif" }}
-            >
-              Aegis<sup className="text-xs">®</sup>
+            <span className="text-3xl font-serif tracking-tight select-none">
+              Aegis
             </span>
-            <span className="text-xs bg-zinc-900 border border-white/[0.04] text-zinc-500 px-2 py-0.5 rounded font-mono">v1.0.0</span>
+            <span className="text-xs bg-mist-gray text-slate-gray px-2 py-0.5 rounded-full font-mono font-medium">
+              Enterprise v1.0.0
+            </span>
           </div>
-          <nav className="flex items-center gap-6">
-            <a href="#features" className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">Features</a>
-            <a href="#workflow" className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">Workflow</a>
-            <a href="#developer" className="text-sm text-zinc-400 hover:text-zinc-200 transition-colors">Developer API</a>
+          
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#technologies" className="text-sm font-medium text-slate-gray hover:text-ink-black transition-colors">Stack</a>
+            <a href="#why-passkeys" className="text-sm font-medium text-slate-gray hover:text-ink-black transition-colors">Security</a>
+            <a href="#features" className="text-sm font-medium text-slate-gray hover:text-ink-black transition-colors">Features</a>
+            <a href="#interactive-demo" className="text-sm font-medium text-slate-gray hover:text-ink-black transition-colors">Sandbox</a>
+            <a href="#faq" className="text-sm font-medium text-slate-gray hover:text-ink-black transition-colors">FAQ</a>
+          </div>
+
+          <div className="flex items-center gap-4">
             <button 
               onClick={() => onNavigate('login')}
-              className="text-sm bg-zinc-900 hover:bg-zinc-800 text-zinc-100 border border-zinc-800 px-4 py-1.5 rounded transition-all cursor-pointer"
+              className="text-sm font-medium text-ink-black hover:underline cursor-pointer"
             >
               Sign In
             </button>
             <button 
               onClick={() => onNavigate('register')}
-              className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded font-medium shadow-sm transition-all cursor-pointer"
+              className="btn-primary"
             >
-              Register Device
+              Deploy Aegis
             </button>
-          </nav>
+          </div>
         </div>
-      </header>
+      </nav>
 
       {/* Hero Section */}
-      <section className="relative z-10 max-w-6xl mx-auto px-6 pt-16 pb-20 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+      <header className="max-w-[1200px] mx-auto px-6 pt-16 pb-24 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
         
-        {/* Left Column: Typography */}
-        <div className="lg:col-span-6 flex flex-col items-start text-left max-w-xl">
-          <span className="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20 mb-6 animate-fade-rise">
-            FIDO2 / PASSKEY INFRASTRUCTURE
+        {/* Left Column: Heading & CTAs */}
+        <div className="lg:col-span-7 flex flex-col items-start">
+          <span className="text-sm font-medium tracking-normal text-slate-gray mb-4 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-ink-black" />
+            PASSWORDLESS ACCESS ORCHESTRATOR
           </span>
-          <h1 
-            className="text-5xl sm:text-6xl leading-[0.95] tracking-[-2.46px] font-normal text-foreground animate-fade-rise"
-            style={{ fontFamily: "'Instrument Serif', serif" }}
-          >
-            The cryptographic <em className="not-italic text-muted-foreground">authentication</em> gateway.
+          
+          <h1 className="text-5xl sm:text-7xl font-serif tracking-tight leading-[1.05] text-ink-black">
+            The next generation <br />
+            of <span className="italic font-serif">trusted identity</span>.
           </h1>
-          <p className="text-zinc-400 text-base sm:text-lg mt-6 leading-relaxed animate-fade-rise-delay">
-            Replace passwords with hardware-bound credentials, SSE-driven active trust bindings, and a tamper-evident audit log designed for modern enterprise infrastructure.
+          
+          <p className="text-slate-gray text-lg sm:text-xl mt-6 leading-relaxed max-w-xl">
+            Aegis eliminates password vulnerabilities by deploying hardware-bound passkeys, SSE active session bindings, and a tamper-evident audit ledger built to enforce high-assurance enterprise security guidelines.
           </p>
-          <div className="flex items-center gap-4 mt-8 animate-fade-rise-delay-2">
+          
+          <div className="flex flex-wrap items-center gap-4 mt-8">
             <button 
               onClick={() => onNavigate('register')}
-              className="liquid-glass rounded-full px-8 py-3.5 text-sm text-foreground hover:scale-[1.03] active:scale-[0.98] transition-all duration-300 ease-out font-medium cursor-pointer"
+              className="btn-primary"
             >
-              Deploy Authenticator
+              Deploy Aegis Device
             </button>
             <button 
               onClick={() => onNavigate('login')}
-              className="text-sm font-medium text-zinc-400 hover:text-zinc-200 px-6 py-3.5 transition-colors duration-300 bg-transparent border-none cursor-pointer"
+              className="btn-secondary"
             >
-              Access Platform →
+              Access Gateways →
             </button>
           </div>
         </div>
 
-        {/* Right Column: Live Interactive Widget */}
-        <div className="lg:col-span-6 flex justify-center items-center w-full animate-fade-rise-delay">
-          <div className="relative w-full max-w-[440px] aspect-[4/5] rounded-3xl border border-white/[0.08] bg-[#0c0c0e]/80 backdrop-blur-xl shadow-2xl p-8 flex flex-col justify-between overflow-hidden">
+        {/* Right Column: Looping Interactive Simulation Card */}
+        <div className="lg:col-span-5 flex justify-center items-center w-full">
+          <div className="floating-artifact w-full max-w-[420px] aspect-[4/5] p-6 flex flex-col justify-between overflow-hidden relative border border-[#ececec]">
             
-            {/* Ambient Background Glow inside Card */}
-            <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
-            
-            {/* Header of the Authenticator Widget */}
-            <div className="flex justify-between items-center border-b border-white/[0.04] pb-4">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-[#ececec] pb-3">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                <span className="text-xs font-mono text-zinc-500 tracking-wider uppercase">AEGIS-AUTH-NODE-01</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-xs font-mono font-semibold text-ink-black tracking-wider uppercase">SIMULATED-AUTH-PIPELINE</span>
               </div>
-              <span className="text-xs font-mono text-zinc-500">v1.0.0</span>
+              <span className="text-[10px] font-mono text-slate-gray">Live Loop</span>
             </div>
 
-            {/* Content Body depending on State */}
-            <div className="flex-1 flex flex-col justify-center py-6">
+            {/* Loop Steps Display */}
+            <div className="flex-1 flex flex-col justify-center py-4">
+              <AnimatePresence mode="wait">
+                
+                {/* STEP 0: Idle */}
+                {simStep === 0 && (
+                  <motion.div 
+                    key="step0"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-center space-y-4"
+                  >
+                    <div className="w-16 h-16 rounded-full bg-[#f2f2f3] flex items-center justify-center mx-auto">
+                      <RefreshCw className="w-8 h-8 text-slate-gray animate-spin-slow" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-base text-ink-black">Awaiting Login Request</h4>
+                      <p className="text-xs text-slate-gray mt-1">Starting automatic cryptographical simulation...</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STEP 1: Typing Email */}
+                {simStep === 1 && (
+                  <motion.div 
+                    key="step1"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-4"
+                  >
+                    <div className="text-left space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-slate-gray">Step 1 / 6</span>
+                      <h4 className="font-semibold text-base text-ink-black">User Initiates Verification</h4>
+                    </div>
+                    <div className="p-4 bg-mist-gray rounded-xl border border-transparent">
+                      <label className="text-[10px] font-mono text-slate-gray block mb-1">IDENTIFIER</label>
+                      <div className="font-mono text-sm text-ink-black bg-white px-3 py-2 rounded border border-[#ececec] min-h-[38px] flex items-center">
+                        {simEmail}
+                        <span className="w-1.5 h-4 bg-ink-black ml-1 animate-pulse" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STEP 2: Challenge Sent */}
+                {simStep === 2 && (
+                  <motion.div 
+                    key="step2"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-center space-y-6"
+                  >
+                    <div className="text-left space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-slate-gray">Step 2 / 6</span>
+                      <h4 className="font-semibold text-base text-ink-black">Challenge Dispatch</h4>
+                    </div>
+                    <div className="flex items-center justify-between px-6 py-4 bg-mist-gray rounded-2xl relative">
+                      <Server className="w-8 h-8 text-ink-black" />
+                      
+                      {/* Floating Packet Animation */}
+                      <motion.div 
+                        initial={{ x: -100, opacity: 0 }}
+                        animate={{ x: 100, opacity: [0, 1, 1, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                        className="w-3 h-3 rounded-full bg-ink-black shadow-[0_0_8px_rgba(23,25,28,0.5)] absolute left-[25%]"
+                      />
+                      
+                      <Cpu className="w-8 h-8 text-ink-black" />
+                    </div>
+                    <p className="text-xs text-slate-gray">
+                      Cryptographic challenge generated and sent to hardware device.
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* STEP 3: Biometric Fingerprint Scan */}
+                {simStep === 3 && (
+                  <motion.div 
+                    key="step3"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-center space-y-4"
+                  >
+                    <div className="text-left space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-slate-gray">Step 3 / 6</span>
+                      <h4 className="font-semibold text-base text-ink-black">Biometric Consent Signature</h4>
+                    </div>
+                    
+                    <div className="relative w-24 h-24 mx-auto flex items-center justify-center rounded-full bg-mist-gray overflow-hidden border border-[#ececec]">
+                      {/* Scan Laser */}
+                      <div 
+                        className="absolute left-0 right-0 h-[2px] bg-ink-black"
+                        style={{ top: `${simFingerprintScan}%`, transition: 'top 0.05s linear' }}
+                      />
+                      <Fingerprint className="w-12 h-12 text-ink-black/60" />
+                    </div>
+                    <span className="text-xs font-mono text-slate-gray">{simFingerprintScan}% Secure Scanning</span>
+                  </motion.div>
+                )}
+
+                {/* STEP 4: Enclave Signature */}
+                {simStep === 4 && (
+                  <motion.div 
+                    key="step4"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-center space-y-4"
+                  >
+                    <div className="text-left space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-slate-gray">Step 4 / 6</span>
+                      <h4 className="font-semibold text-base text-ink-black">Cryptographic Signature Sealed</h4>
+                    </div>
+                    <div className="w-16 h-16 rounded-full bg-mist-gray flex items-center justify-center mx-auto">
+                      <Lock className="w-8 h-8 text-ink-black" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-mono text-slate-gray break-all bg-mist-gray p-2 rounded">
+                        sig_7b29a1ff02a...
+                      </p>
+                      <p className="text-[10px] text-slate-gray">
+                        Signed inside TPM secure enclave with user's private key.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* STEP 5: Verification Handshake */}
+                {simStep === 5 && (
+                  <motion.div 
+                    key="step5"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-center space-y-4"
+                  >
+                    <div className="text-left space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-slate-gray">Step 5 / 6</span>
+                      <h4 className="font-semibold text-base text-ink-black">Signature Verification</h4>
+                    </div>
+                    <div className="flex justify-center items-center gap-6">
+                      <Cpu className="w-8 h-8 text-slate-gray" />
+                      <div className="w-20 bg-mist-gray h-2.5 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: "100%" }}
+                          transition={{ duration: 1.5 }}
+                          className="h-full bg-ink-black"
+                        />
+                      </div>
+                      <Server className="w-8 h-8 text-ink-black" />
+                    </div>
+                    <p className="text-xs text-slate-gray">Comparing signature against stored public key...</p>
+                  </motion.div>
+                )}
+
+                {/* STEP 6: Verified */}
+                {simStep === 6 && (
+                  <motion.div 
+                    key="step6"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-center space-y-4"
+                  >
+                    <div className="text-left space-y-1">
+                      <span className="text-[10px] font-mono uppercase text-slate-gray">Step 6 / 6</span>
+                      <h4 className="font-semibold text-base text-ink-black">Access Granted</h4>
+                    </div>
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
+                      <CheckCircle className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold uppercase text-emerald-600 bg-emerald-100/50 px-3 py-1 rounded-full">
+                        Secure Session Initialized
+                      </span>
+                      <p className="text-xs text-slate-gray mt-2 font-mono">Token cookie bound to device trust</p>
+                    </div>
+                  </motion.div>
+                )}
+
+              </AnimatePresence>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-[#ececec] pt-3 flex justify-between items-center text-[10px] font-mono text-slate-gray">
+              <span>FIDO2 / WEBAUTHN STANDARD</span>
+              <span>SECURE LEVEL 4</span>
+            </div>
+
+          </div>
+        </div>
+
+      </header>
+
+      {/* Trusted Stack Technologies */}
+      <section id="technologies" className="bg-fog-white border-y border-[#ececec] py-12">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
+          <p className="text-sm font-medium text-slate-gray uppercase tracking-wider">
+            Built on Industry Standard Cryptography
+          </p>
+          <div className="flex flex-wrap items-center gap-8 md:gap-12 text-slate-gray">
+            <div className="flex items-center gap-2">
+              <Key className="w-5 h-5 text-ink-black" />
+              <span className="text-sm font-semibold text-ink-black tracking-tight">FIDO2 Passkeys</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Cpu className="w-5 h-5 text-ink-black" />
+              <span className="text-sm font-semibold text-ink-black tracking-tight">WebAuthn API</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-ink-black" />
+              <span className="text-sm font-semibold text-ink-black tracking-tight">M-of-N Cryptographic Gates</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Server className="w-5 h-5 text-ink-black" />
+              <span className="text-sm font-semibold text-ink-black tracking-tight">SSE Real-Time Handshake</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Passwords Fail Section */}
+      <section id="why-passkeys" className="max-w-[1200px] mx-auto px-6 py-24 space-y-16">
+        <div className="text-center max-w-2xl mx-auto space-y-4">
+          <span className="text-xs font-semibold text-slate-gray uppercase tracking-wider">The Security Gap</span>
+          <h2 className="text-4xl sm:text-5xl font-serif text-ink-black">Why standard passwords fail the modern enterprise</h2>
+          <p className="text-slate-gray text-base">Passwords introduce phishing vectors, credential stuffing risk, and fatigue attacks. Here is how Aegis completely resets the security perimeter.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="glass-panel p-8 space-y-4">
+            <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-semibold text-ink-black">Legacy Authentication Risks</h3>
+            <ul className="space-y-2 text-sm text-slate-gray">
+              <li className="flex items-start gap-2">
+                <span className="text-rose-500 font-bold">•</span>
+                Vulnerable to phishing proxies and social engineering.
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-rose-500 font-bold">•</span>
+                MFA fatigue attacks wear down administrators.
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-rose-500 font-bold">•</span>
+                Centralized database compromises leak password hashes.
+              </li>
+            </ul>
+          </div>
+
+          <div className="accent-peach-card p-8 space-y-4">
+            <div className="w-10 h-10 rounded-full bg-[#fafafb]/20 flex items-center justify-center text-sienna-brown">
+              <Check className="w-5 h-5" />
+            </div>
+            <h3 className="text-xl font-semibold text-sienna-brown">Aegis Enclave Security</h3>
+            <ul className="space-y-2 text-sm text-sienna-brown/85">
+              <li className="flex items-start gap-2">
+                <span className="text-sienna-brown font-bold">•</span>
+                Phishing-resistant bindings tied to unique domain origins.
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sienna-brown font-bold">•</span>
+                M-of-N consensus gates prevent single-admin hijack risks.
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-sienna-brown font-bold">•</span>
+                No shared secret stored on the server — only public keys.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Core Features Cards */}
+      <section id="features" className="bg-fog-white border-y border-[#ececec] py-24">
+        <div className="max-w-[1200px] mx-auto px-6 space-y-16">
+          <div className="text-left space-y-4">
+            <span className="text-xs font-semibold text-slate-gray uppercase tracking-wider">Features</span>
+            <h2 className="text-4xl sm:text-5xl font-serif text-ink-black">Designed for High-Assurance Environments</h2>
+            <p className="text-slate-gray text-base max-w-xl">Every security feature is cryptographically enforced and recorded in our tamper-evident audit ledger.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="bg-white p-8 rounded-3xl border border-[#ececec] flex flex-col justify-between hover:shadow-lg transition-shadow duration-300">
+              <div className="space-y-4">
+                <Fingerprint className="w-8 h-8 text-ink-black" />
+                <h3 className="text-lg font-semibold text-ink-black">FIDO2 Passkeys</h3>
+                <p className="text-sm text-slate-gray leading-relaxed">Leverage hardware-bound cryptographic credentials stored directly in your device’s secure enclave.</p>
+              </div>
+              <span className="text-xs text-slate-gray uppercase font-mono mt-6 block">SECURE ENCLAVE BOUND</span>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-white p-8 rounded-3xl border border-[#ececec] flex flex-col justify-between hover:shadow-lg transition-shadow duration-300">
+              <div className="space-y-4">
+                <Users className="w-8 h-8 text-ink-black" />
+                <h3 className="text-lg font-semibold text-ink-black">M-of-N Cryptographic Gating</h3>
+                <p className="text-sm text-slate-gray leading-relaxed">Require consensus authorization from multiple administrators before executing high-risk, sensitive workspace actions.</p>
+              </div>
+              <span className="text-xs text-slate-gray uppercase font-mono mt-6 block">CONSENSUS ARCHITECTURE</span>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-white p-8 rounded-3xl border border-[#ececec] flex flex-col justify-between hover:shadow-lg transition-shadow duration-300">
+              <div className="space-y-4">
+                <Activity className="w-8 h-8 text-ink-black" />
+                <h3 className="text-lg font-semibold text-ink-black">Real-time Handshakes</h3>
+                <p className="text-sm text-slate-gray leading-relaxed">Enforce dynamic session verification challenges through a secure Server-Sent Events pipeline.</p>
+              </div>
+              <span className="text-xs text-slate-gray uppercase font-mono mt-6 block">SSE STREAM ACTIVE</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Security Architecture - Accent Peach Card Section */}
+      <section className="max-w-[1200px] mx-auto px-6 py-24">
+        <div className="accent-peach-card p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-12">
+          <div className="max-w-xl space-y-6">
+            <span className="text-xs font-semibold uppercase tracking-wider text-sienna-brown/80 font-mono">Architectural Restraint</span>
+            <h2 className="text-3xl sm:text-4xl font-serif text-sienna-brown leading-tight">
+              "We have eliminated passwords entirely. There are no static credentials left to steal."
+            </h2>
+            <p className="text-sm text-sienna-brown/80">
+              Aegis enforces origin verification on every handshake. This prevents credential hijacking, man-in-the-middle replay vectors, and phishing links. By pairing passkeys with M-of-N signing pools, workspace integrity is mathematically guaranteed.
+            </p>
+          </div>
+          <div className="w-full md:w-auto flex justify-center">
+            <div className="bg-white p-6 rounded-2xl border border-sienna-brown/10 w-full max-w-[280px] shadow-lg text-left">
+              <div className="flex items-center gap-2 text-sienna-brown mb-4">
+                <Lock className="w-5 h-5" />
+                <span className="text-xs font-mono font-bold">DEVICE ENCLAVE SEAL</span>
+              </div>
+              <div className="space-y-2 text-xs font-mono text-[#5d2a1a]/70">
+                <div className="flex justify-between border-b border-[#5d2a1a]/10 pb-1">
+                  <span>RP_ID</span>
+                  <span>localhost</span>
+                </div>
+                <div className="flex justify-between border-b border-[#5d2a1a]/10 pb-1">
+                  <span>ATTESTATION</span>
+                  <span>NONE</span>
+                </div>
+                <div className="flex justify-between border-b border-[#5d2a1a]/10 pb-1">
+                  <span>USER_VERIFICATION</span>
+                  <span>PREFERRED</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>RESIDENT_KEY</span>
+                  <span>PREFERRED</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Statistics Section with gestural line chart */}
+      <section className="bg-fog-white border-y border-[#ececec] py-24">
+        <div className="max-w-[1200px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          <div className="lg:col-span-6 space-y-6">
+            <span className="text-xs font-semibold text-slate-gray uppercase tracking-wider">Metrics</span>
+            <h2 className="text-4xl sm:text-5xl font-serif text-ink-black">Quantifiably Faster and More Secure</h2>
+            <p className="text-slate-gray text-base leading-relaxed">
+              Replacing standard credentials speeds up authentication loops while reducing human-error vectors. No typing, no code lookup, just pure hardware verification.
+            </p>
+            <div className="grid grid-cols-2 gap-6 pt-4">
+              <div className="space-y-1">
+                <h3 className="text-3xl font-serif font-bold text-ink-black">0%</h3>
+                <p className="text-xs text-slate-gray">PHISHING VULNERABILITY VECTORS</p>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-3xl font-serif font-bold text-ink-black">1.2s</h3>
+                <p className="text-xs text-slate-gray">AVERAGE LOGIN VERIFICATION TIME</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-6 flex justify-center">
+            <div className="floating-artifact p-6 w-full max-w-[380px] space-y-6 border border-[#ececec]">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="text-sm font-semibold text-ink-black">Verification Performance</h4>
+                  <span className="text-[10px] text-slate-gray">Handshakes Completed / Second</span>
+                </div>
+                <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">↑ 4.2x vs Last Month</span>
+              </div>
               
-              {/* STATE 1: EMAIL INPUT */}
-              {demoState === 'EMAIL_INPUT' && (
-                <form onSubmit={handleEmailSubmit} className="flex flex-col gap-4 animate-fade-rise">
-                  <div className="text-left mb-2">
-                    <h3 className="text-lg font-medium text-foreground tracking-tight">Interactive Sandbox</h3>
-                    <p className="text-xs text-zinc-500 mt-1">Simulate a hardware-bound passkey registration & handshake.</p>
-                  </div>
-                  <input
-                    type="email"
-                    placeholder="Enter a test email address"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.08] rounded-xl text-foreground placeholder:text-zinc-500 text-sm focus:outline-none focus:border-blue-500/50 transition-colors"
+              {/* Gestural Line Chart */}
+              <div className="h-32 w-full relative flex items-end">
+                <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                  {/* Chart Line */}
+                  <path 
+                    d={`M ${chartPoints.map(p => `${p.x} ${p.y}`).join(' L ')}`}
+                    fill="none" 
+                    stroke="#17191c" 
+                    strokeWidth="2.5" 
+                    strokeLinecap="round"
                   />
+                  {/* Subtle Gradient fill under line */}
+                  <path 
+                    d={`M 10 100 L ${chartPoints.map(p => `${p.x} ${p.y}`).join(' L ')} L 100 100 Z`}
+                    fill="rgba(23, 25, 28, 0.03)"
+                  />
+                </svg>
+              </div>
+              
+              <div className="flex justify-between text-[9px] font-mono text-slate-gray">
+                <span>AUG 01</span>
+                <span>SEP 15</span>
+                <span>OCT 30</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Interactive Authentication Sandbox Demo */}
+      <section id="interactive-demo" className="max-w-[1200px] mx-auto px-6 py-24 space-y-16">
+        <div className="text-center max-w-2xl mx-auto space-y-4">
+          <span className="text-xs font-semibold text-slate-gray uppercase tracking-wider">Interactive Playground</span>
+          <h2 className="text-4xl sm:text-5xl font-serif text-ink-black">Test the Passkey Handshake Loop</h2>
+          <p className="text-slate-gray text-base">Type an email below to simulate a hardware authentication challenge, verification, and session binding.</p>
+        </div>
+
+        <div className="flex justify-center">
+          <div className="floating-artifact w-full max-w-[480px] p-8 border border-[#ececec] relative">
+            <div className="flex justify-between items-center border-b border-[#ececec] pb-4 mb-6">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-ink-black" />
+                <span className="text-xs font-mono font-semibold text-ink-black">SANDBOX CLIENT GATEWAY</span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-gray">Sandbox Ready</span>
+            </div>
+
+            <AnimatePresence mode="wait">
+              {/* SANDBOX STATE 1: EMAIL INPUT */}
+              {demoState === 'EMAIL_INPUT' && (
+                <motion.form 
+                  key="form-email"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onSubmit={handleEmailSubmit} 
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-mono text-slate-gray block uppercase">Enter Email to register mock passkey</label>
+                    <input
+                      type="email"
+                      placeholder="e.g. pilot@aegis.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-[#ececec] rounded-xl text-ink-black placeholder:text-slate-gray text-sm focus:outline-none focus:border-ink-black transition-colors"
+                    />
+                  </div>
                   <button 
                     type="submit"
-                    className="w-full py-3 bg-white text-black font-semibold text-sm rounded-xl hover:bg-[#ededed] active:scale-[0.98] transition-all cursor-pointer shadow-lg"
+                    className="w-full py-3 bg-ink-black text-white font-semibold text-sm rounded-xl hover:bg-primary-hover active:scale-[0.98] transition-all cursor-pointer shadow-md"
                   >
-                    Simulate Passkey Login
+                    Simulate Handshake
                   </button>
-                </form>
+                </motion.form>
               )}
 
-              {/* STATE 2: NUMBER MATCHING */}
+              {/* SANDBOX STATE 2: NUMBER MATCHING */}
               {demoState === 'NUMBER_MATCH' && (
-                <div className="flex flex-col items-center gap-6 animate-fade-rise text-center">
+                <motion.div 
+                  key="form-number"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6 text-center"
+                >
                   <div>
-                    <h3 className="text-lg font-medium text-foreground tracking-tight">Verify Intent</h3>
-                    <p className="text-xs text-zinc-500 mt-1">Tap the matching number on your verified device.</p>
+                    <h3 className="text-lg font-semibold text-ink-black">Select Intent Number</h3>
+                    <p className="text-xs text-slate-gray mt-1">Tap the verification code displayed on your device screen.</p>
                   </div>
                   
-                  {/* Huge verification Code */}
-                  <div className="relative py-6 px-10 bg-white/[0.02] border border-white/[0.06] rounded-2xl">
-                    <span className="text-5xl font-semibold tracking-widest text-blue-400 font-mono">
+                  <div className="py-6 px-10 bg-mist-gray rounded-2xl inline-block border border-[#ececec]">
+                    <span className="text-5xl font-semibold tracking-widest text-ink-black font-mono">
                       {verificationCode}
                     </span>
                   </div>
 
-                  {/* Simulated Mobile Device Grid */}
-                  <div className="w-full max-w-[280px] bg-white/[0.01] border border-white/[0.06] rounded-2xl p-4 mt-2">
-                    <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest mb-3">Simulated Phone</p>
+                  <div className="w-full max-w-[260px] mx-auto bg-[#fafafb] border border-[#ececec] rounded-2xl p-4 mt-2">
+                    <p className="text-[10px] font-mono text-slate-gray uppercase tracking-widest mb-3">Mock Mobile Prompt</p>
                     <div className="grid grid-cols-3 gap-2">
-                      {[38, 76, 52].map((num) => (
+                      {[24, 48, 92].map((num) => (
                         <button
                           key={num}
                           onClick={() => handleNumberSelect(num)}
-                          className={`py-3.5 text-sm font-semibold font-mono rounded-xl border transition-all cursor-pointer ${
+                          className={`py-3 text-sm font-semibold font-mono rounded-xl border transition-all cursor-pointer ${
                             selectedNumber === num
                               ? num === verificationCode
-                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
-                                : 'bg-rose-500/20 border-rose-500 text-rose-400'
-                              : 'bg-white/[0.02] border-white/[0.06] text-foreground hover:bg-white/[0.04]'
+                                ? 'bg-emerald-500/20 border-emerald-500 text-emerald-600'
+                                : 'bg-rose-500/20 border-rose-500 text-rose-600'
+                              : 'bg-white border-[#ececec] text-ink-black hover:bg-mist-gray'
                           }`}
                         >
                           {num}
@@ -230,357 +728,162 @@ const LandingPage = ({ onNavigate }) => {
                       ))}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
-              {/* STATE 3: BIOMETRIC SCAN */}
+              {/* SANDBOX STATE 3: BIOMETRIC SCAN */}
               {demoState === 'BIOMETRIC_SCAN' && (
-                <div className="flex flex-col items-center gap-6 animate-fade-rise text-center">
+                <motion.div 
+                  key="form-biometric"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6 text-center"
+                >
                   <div>
-                    <h3 className="text-lg font-medium text-foreground tracking-tight">Verifying Credentials</h3>
-                    <p className="text-xs text-zinc-500 mt-1">Acquiring cryptographic signature via hardware enclave.</p>
+                    <h3 className="text-lg font-semibold text-ink-black">Touch ID / Biometric Challenge</h3>
+                    <p className="text-xs text-slate-gray mt-1">Acquiring cryptographic assertion signature via secure chip.</p>
                   </div>
 
-                  {/* Fingerprint Scanner Graphic */}
-                  <div className="relative w-28 h-28 flex items-center justify-center rounded-full border border-blue-500/20 bg-blue-500/5 mt-4 overflow-hidden">
-                    {/* Scanning Laser Line */}
+                  <div className="relative w-28 h-28 mx-auto flex items-center justify-center rounded-full bg-mist-gray border border-[#ececec] overflow-hidden">
                     <div 
-                      className="absolute left-0 right-0 h-[2px] bg-blue-400/80 shadow-[0_0_8px_#60a5fa] animate-pulse"
+                      className="absolute left-0 right-0 h-[2px] bg-ink-black shadow-[0_0_8px_rgba(23,25,28,0.5)]"
                       style={{
                         top: `${biometricProgress}%`,
                         transition: 'top 0.08s linear'
                       }}
                     />
-                    
-                    {/* Biometric Fingerprint Icon */}
-                    <svg className="w-14 h-14 text-blue-400/60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2 2-.9 2-2z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2a9 9 0 00-9 9m9-9a9 9 0 019 9m-9-9v3m0 12a9 9 0 009-9m-9 9a9 9 0 01-9-9m9 9v-3m0-6a3 3 0 013 3v1m-3-4a3 3 0 00-3 3v1" />
-                    </svg>
-
-                    {/* Progress Circle border */}
-                    <svg className="absolute inset-0 w-full h-full transform -rotate-90">
-                      <circle
-                        cx="56"
-                        cy="56"
-                        r="52"
-                        stroke="rgba(59, 130, 246, 0.3)"
-                        strokeWidth="3"
-                        fill="transparent"
-                      />
-                      <circle
-                        cx="56"
-                        cy="56"
-                        r="52"
-                        stroke="#60a5fa"
-                        strokeWidth="3"
-                        fill="transparent"
-                        strokeDasharray={326}
-                        strokeDashoffset={326 - (326 * biometricProgress) / 100}
-                        style={{ transition: 'stroke-dashoffset 0.08s linear' }}
-                      />
-                    </svg>
+                    <Fingerprint className="w-14 h-14 text-ink-black/50" />
                   </div>
 
-                  <span className="text-xs font-mono text-blue-400 mt-2">{biometricProgress}% Completed</span>
-                </div>
+                  <div className="text-xs font-mono text-ink-black">{biometricProgress}% Verified</div>
+                </motion.div>
               )}
 
-              {/* STATE 4: AUTHORIZED */}
+              {/* SANDBOX STATE 4: AUTHORIZED */}
               {demoState === 'AUTHORIZED' && (
-                <div className="flex flex-col gap-5 animate-fade-rise text-left">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/50 flex items-center justify-center text-emerald-400">
+                <motion.div 
+                  key="form-auth"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="space-y-6"
+                >
+                  <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 font-bold">
                       ✓
                     </div>
                     <div>
-                      <h3 className="text-base font-semibold text-foreground">Session Authenticated</h3>
-                      <p className="text-[11px] text-zinc-500">Authorized session for {email || 'admin@company.com'}</p>
+                      <h4 className="text-sm font-semibold text-emerald-800">Workspace Authorized</h4>
+                      <p className="text-[11px] text-emerald-600">Active session token set for {email}</p>
                     </div>
                   </div>
 
-                  {/* Mini-Dashboard System Details */}
-                  <div className="flex flex-col gap-3 bg-white/[0.01] border border-white/[0.06] rounded-2xl p-4">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-zinc-500 font-mono">ENCLAVE KEY:</span>
-                      <span className="font-mono text-emerald-400">verified_key_ok</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-zinc-500 font-mono">DEVICE LINK:</span>
-                      <span className="font-mono text-foreground">iPhone 15 Pro</span>
-                    </div>
-                    <div className="flex flex-col gap-1 border-t border-white/[0.04] pt-3 mt-1">
-                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">BLOCKCHAIN LEDGER ACTION:</span>
-                      <div className="flex justify-between items-center mt-0.5">
-                        <span className="font-mono text-xs text-blue-400 truncate max-w-[200px]">
-                          6a5a78e7e65210b269cef0f0...
-                        </span>
-                        <span className="text-[10px] bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded border border-blue-500/20 uppercase font-mono">
-                          Committed
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
+                  <button 
                     onClick={resetDemo}
-                    className="w-full py-3 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-foreground text-sm font-medium rounded-xl transition-colors cursor-pointer"
+                    className="w-full py-3 bg-mist-gray text-ink-black font-semibold text-sm rounded-xl hover:bg-[#e4e4e7] transition-all cursor-pointer"
                   >
-                    Reset Authentication Demo
+                    Reset Sandbox Loop
                   </button>
-                </div>
+                </motion.div>
               )}
-
-            </div>
-
-            {/* Bottom Footer block inside Card */}
-            <div className="border-t border-white/[0.04] pt-4 flex justify-between items-center text-[10px] font-mono text-zinc-500">
-              <span>STATUS: READY</span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-                SECURE HANDSHAKE ACTIVE
-              </span>
-            </div>
+            </AnimatePresence>
 
           </div>
         </div>
       </section>
 
-      {/* Why Aegis Section */}
-      <section id="why" className="border-t border-zinc-900 bg-zinc-900/10 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-            <div>
-              <span className="text-xs uppercase tracking-wider text-blue-500 font-mono font-semibold block mb-3">The Problem</span>
-              <h2 className="text-2xl font-bold tracking-tight mb-4 text-zinc-200">The inherent vulnerabilities of password-based security</h2>
-              <p className="text-zinc-400 text-sm leading-relaxed mb-4">
-                Conventional authentication relies on shared secrets: passwords, pins, and codes. Because these secrets exist to be typed, they can be phished, intercepted via SIM swapping, or guessed through brute force.
-              </p>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Even multi-factor push approvals fail when attackers trigger MFA fatigue, spamming the user until they accidentally tap "Yes" on a busy day.
-              </p>
-            </div>
-            <div>
-              <span className="text-xs uppercase tracking-wider text-blue-500 font-mono font-semibold block mb-3">The Solution</span>
-              <h2 className="text-2xl font-bold tracking-tight mb-4 text-zinc-200">Hardware-bound biometrics and dynamic approvals</h2>
-              <p className="text-zinc-400 text-sm leading-relaxed mb-4">
-                Aegis eliminates shared secrets. All logins require WebAuthn/Passkey signatures verified by secure local enclaves (fingerprint or face scanners).
-              </p>
-              <p className="text-zinc-400 text-sm leading-relaxed">
-                Critical resource actions enforce multi-party threshold policies. An administrator cannot act alone, and all transaction signatures are cryptographically bound to the audit trail.
-              </p>
-            </div>
+      {/* Frequently Asked Questions */}
+      <section id="faq" className="bg-fog-white border-y border-[#ececec] py-24">
+        <div className="max-w-[800px] mx-auto px-6 space-y-12">
+          <div className="text-center space-y-4">
+            <span className="text-xs font-semibold text-slate-gray uppercase tracking-wider">FAQ</span>
+            <h2 className="text-4xl font-serif text-ink-black">Frequently Asked Questions</h2>
           </div>
-        </div>
-      </section>
 
-      {/* Core Features Section */}
-      <section id="features" className="border-t border-zinc-900 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="text-xs uppercase tracking-wider text-blue-500 font-mono font-semibold block mb-2">Core Features</span>
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-100">Implemented Security Capabilities</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="border border-zinc-800 bg-zinc-900/30 p-6 rounded-lg">
-              <h3 className="font-semibold text-zinc-200 mb-2">1. Passwordless Authentication</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Uses the FIDO2/WebAuthn standard to replace passwords with device-bound public-key credentials. Users register and log in via local biometric secure enclaves (Touch ID / Face ID).
-              </p>
-            </div>
-            <div className="border border-zinc-800 bg-zinc-900/30 p-6 rounded-lg">
-              <h3 className="font-semibold text-zinc-200 mb-2">2. Cross-Device Authentication</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Log in to untrusted devices using your phone as a hardware authenticator. Real-time Server-Sent Events (SSE) push verification prompts with phishing-resistant number matching.
-              </p>
-            </div>
-            <div className="border border-zinc-800 bg-zinc-900/30 p-6 rounded-lg">
-              <h3 className="font-semibold text-zinc-200 mb-2">3. Multi-Party Authorization</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Configurable threshold policies (M-of-N signatures) for production environments. Accessing or executing critical operations requires separate biometric signatures from designated approver roles.
-              </p>
-            </div>
-            <div className="border border-zinc-800 bg-zinc-900/30 p-6 rounded-lg">
-              <h3 className="font-semibold text-zinc-200 mb-2">4. Tamper-Evident Audit Ledger</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                All login and signature events are cryptographically chained. Each log entry is hashed along with the preceding block's hash, generating a verifiable ledger that immediately exposes tampering.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Authentication Workflow Section */}
-      <section id="workflow" className="border-t border-zinc-900 bg-zinc-900/10 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="text-xs uppercase tracking-wider text-blue-500 font-mono font-semibold block mb-2">Flow Diagram</span>
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-100">The Authentication & Authorization Sequence</h2>
-          </div>
-          <div className="relative border border-zinc-800 bg-zinc-950 p-8 rounded-xl max-w-3xl mx-auto">
-            <div className="flex flex-col gap-6">
-              {[
-                { step: '01', title: 'User Verification Challenge', desc: 'The server generates a unique challenge tied to the target device session.' },
-                { step: '02', title: 'Local Passkey Authentication', desc: 'The user verifies biometrics (fingerprint/face) to sign the WebAuthn challenge.' },
-                { step: '03', title: 'Device Trust Verification', desc: 'The server verifies the cryptographic signature against the user\'s registered public key.' },
-                { step: '04', title: 'Multi-Party Approval Routing', desc: 'If the resource is marked critical (PROD), the system halts access and prompts the authorization queue.' },
-                { step: '05', title: 'Ledger Registry', desc: 'The verified action and corresponding signatures are logged into the cryptographic audit chain.' },
-                { step: '06', title: 'Access Granted', desc: 'The server generates the session token and grants access to the requested scope.' }
-              ].map((item, idx) => (
-                <div key={idx} className="flex gap-4 items-start relative">
-                  <div className="h-8 w-8 rounded bg-zinc-900 border border-zinc-800 flex items-center justify-center text-xs font-mono text-blue-400 font-semibold shrink-0">
-                    {item.step}
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-zinc-200 text-sm mb-1">{item.title}</h4>
-                    <p className="text-xs text-zinc-400">{item.desc}</p>
-                  </div>
-                  {idx < 5 && <div className="absolute left-4 top-8 bottom-0 w-[1px] bg-zinc-800 -mb-6"></div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Dashboard Preview Section */}
-      <section id="preview" className="border-t border-zinc-900 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="text-xs uppercase tracking-wider text-blue-500 font-mono font-semibold block mb-2">Platform Mockup</span>
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-100">Inside the Identity Control Center</h2>
-          </div>
-          <div className="border border-zinc-800 bg-zinc-900/30 rounded-xl p-6 max-w-4xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="border border-zinc-800 bg-zinc-950 p-4 rounded-lg">
-                <span className="text-xs text-zinc-500 block mb-1">CONNECTED DEVICES</span>
-                <span className="text-lg font-mono font-bold text-zinc-200">1 Registered Device</span>
-                <span className="text-[11px] text-zinc-500 block mt-1">Platform: Win32 (Biometric Authenticator)</span>
+          <div className="space-y-4">
+            {[
+              {
+                q: "What is a hardware-bound passkey?",
+                a: "A hardware-bound passkey is a cryptographic credential where the private key is generated and stored directly within your device's physical secure enclave (like a TPM or Secure Enclave). The private key never leaves the device, making it immune to remote interception and copy attacks."
+              },
+              {
+                q: "How does the M-of-N Gating work in Aegis?",
+                a: "Aegis allows you to define consensus thresholds for high-risk operations. For example, a database purge requires co-signing from 2 out of 3 administrators. The action remains locked until the SSE channel receives secure WebAuthn signatures from the required number of unique, approved keys."
+              },
+              {
+                q: "Can this prevent session hijacking?",
+                a: "Yes. By binding the session handshake to the specific origin domain and device security parameters, attackers cannot replicate cookies or steal credentials to log in from a non-trusted device."
+              }
+            ].map((item, idx) => (
+              <div key={idx} className="bg-white rounded-2xl border border-[#ececec] overflow-hidden">
+                <button 
+                  onClick={() => toggleFaq(idx)}
+                  className="w-full p-6 text-left font-semibold text-ink-black flex justify-between items-center cursor-pointer"
+                >
+                  <span>{item.q}</span>
+                  <ChevronDown className={`w-4 h-4 text-slate-gray transition-transform ${faqOpen[idx] ? 'transform rotate-180' : ''}`} />
+                </button>
+                <AnimatePresence>
+                  {faqOpen[idx] && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <p className="px-6 pb-6 text-sm text-slate-gray leading-relaxed border-t border-[#ececec]/50 pt-4">
+                        {item.a}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-              <div className="border border-zinc-800 bg-zinc-950 p-4 rounded-lg">
-                <span className="text-xs text-zinc-500 block mb-1">ACTIVE IDENTITY SESSION</span>
-                <span className="text-lg font-semibold text-zinc-200">Alice (Admin)</span>
-                <span className="text-[11px] text-zinc-500 block mt-1">Role-based Access Clearance</span>
-              </div>
-              <div className="border border-zinc-800 bg-zinc-950 p-4 rounded-lg">
-                <span className="text-xs text-zinc-500 block mb-1">QUEUE STATUS</span>
-                <span className="text-lg font-mono font-bold text-zinc-200">0 Pending Action</span>
-                <span className="text-[11px] text-zinc-500 block mt-1">All database approvals cleared</span>
-              </div>
-            </div>
-            <div className="border border-zinc-800 bg-zinc-950 rounded-lg p-4">
-              <h4 className="text-xs font-semibold text-zinc-400 mb-3 uppercase tracking-wider">Verifiable Transaction Log</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-zinc-800 text-zinc-500">
-                      <th className="py-2">Event</th>
-                      <th className="py-2">Actor</th>
-                      <th className="py-2 font-mono">Previous Block Hash</th>
-                    </tr>
-                  </thead>
-                  <tbody className="text-zinc-300 font-mono">
-                    <tr className="border-b border-zinc-900">
-                      <td className="py-2">USER_LOGIN</td>
-                      <td className="py-2">alice@aegis.local</td>
-                      <td className="py-2 text-zinc-500">ed98a7f5b0680ba489c6af9d4272...</td>
-                    </tr>
-                    <tr className="border-b border-zinc-900">
-                      <td className="py-2">APPROVAL_GRANTED</td>
-                      <td className="py-2">2 Signature Threshold</td>
-                      <td className="py-2 text-zinc-500">2bdcfe51ab51ed01ea8e6ccb1bc0...</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Developer API Section */}
-      <section id="developer" className="border-t border-zinc-900 bg-zinc-900/10 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="text-xs uppercase tracking-wider text-blue-500 font-mono font-semibold block mb-2">Developer Integration</span>
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-100">Simple API Implementation</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center max-w-4xl mx-auto">
-            <div>
-              <h3 className="text-xl font-semibold mb-4 text-zinc-200">Programmatic Access Request</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed mb-4">
-                Trigger approval requirements directly from your CI/CD pipelines, database migration runs, or server deployments using standard HTTP headers and body.
-              </p>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                The API evaluates our hardcoded policy checks on `resourceName`, notifies eligible roles in real-time, and forces a multi-signature transaction block.
-              </p>
-            </div>
-            <div className="border border-zinc-800 bg-zinc-950 p-4 rounded-lg font-mono text-[11px] text-zinc-300 overflow-x-auto leading-relaxed shadow-md">
-              <span className="text-zinc-500">// POST /api/approvals/request</span>
-              <br />
-              <span className="text-blue-400">const</span> res = <span className="text-blue-400">await</span> fetch(<span className="text-green-500">'/api/approvals/request'</span>, &#123;
-              <br />
-              &nbsp;&nbsp;method: <span className="text-green-500">'POST'</span>,
-              <br />
-              &nbsp;&nbsp;headers: &#123; <span className="text-green-500">'Content-Type'</span>: <span className="text-green-500">'application/json'</span> &#125;,
-              <br />
-              &nbsp;&nbsp;body: JSON.stringify(&#123;
-              <br />
-              &nbsp;&nbsp;&nbsp;&nbsp;resourceName: <span className="text-green-500">'Production Database Wipe (PROD-DB-01)'</span>,
-              <br />
-              &nbsp;&nbsp;&nbsp;&nbsp;actionPayload: <span className="text-green-500">'DROP DATABASE aegis_prod;'</span>
-              <br />
-              &nbsp;&nbsp;&#125;)
-              <br />
-              &#125;);
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Security Principles Section */}
-      <section id="principles" className="border-t border-zinc-900 py-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <span className="text-xs uppercase tracking-wider text-blue-500 font-mono font-semibold block mb-2">Security Architecture</span>
-            <h2 className="text-3xl font-bold tracking-tight text-zinc-100">Guaranteed Cryptographic Controls</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="border border-zinc-900 bg-zinc-950 p-5 rounded-lg">
-              <h4 className="font-semibold text-sm text-zinc-200 mb-2">Zero Shared Secrets</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                The server stores only public keys. Private keys remain safely inside the user device secure enclave, eliminating credentials database leak risks.
-              </p>
-            </div>
-            <div className="border border-zinc-900 bg-zinc-950 p-5 rounded-lg">
-              <h4 className="font-semibold text-sm text-zinc-200 mb-2">Non-Repudiation</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Because approvals require hardware passkey signatures on the transaction hash, admins cannot dispute actions they have authorized.
-              </p>
-            </div>
-            <div className="border border-zinc-900 bg-zinc-950 p-5 rounded-lg">
-              <h4 className="font-semibold text-sm text-zinc-200 mb-2">Verifiable Chain</h4>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Our cryptographic ledger binds every action sequence block. Any attempt to modify database logs will invalidate the block-chain hash.
-              </p>
-            </div>
-          </div>
+      {/* Final Call to Action */}
+      <section className="max-w-[1200px] mx-auto px-6 py-24 text-center space-y-8">
+        <h2 className="text-4xl sm:text-6xl font-serif text-ink-black leading-tight">
+          Secure your workspace <br />
+          with <span className="italic font-serif">Aegis trust bindings</span>.
+        </h2>
+        <p className="text-slate-gray text-base max-w-xl mx-auto">
+          Deploy biometric identity access on your local networks today and eliminate password vulnerabilities forever.
+        </p>
+        <div className="flex justify-center gap-4">
+          <button 
+            onClick={() => onNavigate('register')}
+            className="btn-primary"
+          >
+            Get Started
+          </button>
+          <button 
+            onClick={() => onNavigate('login')}
+            className="btn-secondary"
+          >
+            Access Gateways
+          </button>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-900 bg-zinc-950 py-12 text-xs text-zinc-500">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-zinc-300">Aegis Auth System</span>
-            <span>&copy; {new Date().getFullYear()} All rights reserved.</span>
+      <footer className="border-t border-[#ececec] py-12 bg-fog-white">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-serif text-ink-black">Aegis</span>
+            <span className="text-[10px] text-slate-gray font-mono">© 2026. All rights reserved.</span>
           </div>
-          <div className="flex items-center gap-6">
-            <span className="text-zinc-600">Built for Tally Code Brewers Hackathon</span>
-            <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-zinc-300 transition-colors">GitHub Repository</a>
+          <div className="flex gap-6 text-xs text-slate-gray font-medium">
+            <a href="#" className="hover:text-ink-black">Privacy Policy</a>
+            <a href="#" className="hover:text-ink-black">Terms of Service</a>
+            <a href="#" className="hover:text-ink-black">Security Guidelines</a>
           </div>
         </div>
       </footer>
+
     </div>
   );
 };

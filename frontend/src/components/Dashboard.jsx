@@ -4,12 +4,32 @@ import { startAuthentication } from '@simplewebauthn/browser';
 import api from '../services/api';
 import Approvals from './Approvals';
 import AuditLog from './AuditLog';
+import { Shield, Key, LogOut, Terminal, Users, Activity, FileText, CheckCircle } from 'lucide-react';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [authPrompt, setAuthPrompt] = useState(null);
   const [processStatus, setProcessStatus] = useState('');
-  const [activeTab, setActiveTab] = useState('approvals'); // 'approvals' | 'audit'
+  const [activeTab, setActiveTab] = useState('approvals'); // 'approvals' | 'audit' | 'users'
+  const [pendingUsers, setPendingUsers] = useState([]);
+  const [triggering, setTriggering] = useState(false);
+
+  const fetchPendingUsers = async () => {
+    try {
+      const { data, ok } = await api.get('/auth/users/pending');
+      if (ok && data.success) {
+        setPendingUsers(data.users);
+      }
+    } catch (err) {
+      console.error('Failed to fetch pending users', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user.role === 'Admin') {
+      fetchPendingUsers();
+    }
+  }, [user]);
 
   useEffect(() => {
     const wsCode = localStorage.getItem('workspaceCode') || '';
@@ -23,16 +43,53 @@ const Dashboard = () => {
       if (payload.type === 'LOGIN_PROMPT') {
         setAuthPrompt(payload);
         setProcessStatus('');
+      } else if (payload.type === 'MEMBER_JOIN_REQUEST') {
+        fetchPendingUsers();
       }
     };
 
     return () => eventSource.close();
   }, []);
 
+  const handleApproveUser = async (email, role) => {
+    try {
+      const { data, ok } = await api.post('/auth/users/approve', { email, role });
+      if (ok && data.success) {
+        alert('User approved successfully!');
+        fetchPendingUsers();
+      } else {
+        alert(data.error || 'Failed to approve user');
+      }
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleTriggerAction = async () => {
+    setTriggering(true);
+    try {
+      const { data, ok } = await api.post('/approvals/request', {
+        resourceName: 'Production Database Wipe (PROD-DB-01)',
+        actionPayload: 'DROP TABLE users CASCADE'
+      });
+      if (ok && data.success) {
+        alert('Secure database wipe request triggered! Awaiting M-of-N co-signatures.');
+      } else {
+        alert(data.error || 'Failed to trigger action');
+      }
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setTriggering(false);
+    }
+  };
+
   const handleApproveLogin = async (selectedCode) => {
     setProcessStatus('Verifying biometrics...');
     try {
-      const assertion = await startAuthentication(authPrompt.options);
+      // Override allowCredentials to empty so Windows Hello always appears
+      const authOptions = { ...authPrompt.options, allowCredentials: [] };
+      const assertion = await startAuthentication(authOptions);
       setProcessStatus('Transmitting secure payload...');
 
       const wsCode = localStorage.getItem('workspaceCode') || '';
@@ -58,83 +115,186 @@ const Dashboard = () => {
   };
 
   return (
-    <div style={{ padding: '2rem', width: '100%', maxWidth: '1000px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ background: 'linear-gradient(to right, #38bdf8, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          Aegis Command Center
-        </h2>
-        <button onClick={logout} style={{ padding: '0.6rem 1.2rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: '#f8fafc', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }}>
-          Logout
-        </button>
-      </div>
+    <div className="min-h-screen bg-white text-ink-black font-sans grid-mesh relative">
+      
+      {/* Navbar */}
+      <nav className="border-b border-[#ececec] bg-white/80 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-serif tracking-tight select-none">
+              Aegis
+            </span>
+            <span className="text-[10px] bg-mist-gray text-slate-gray px-2 py-0.5 rounded-full font-mono font-medium">
+              Dashboard
+            </span>
+          </div>
+          <button 
+            onClick={logout} 
+            className="flex items-center gap-2 text-xs font-semibold px-4 py-2 border border-[#ececec] rounded-full hover:bg-mist-gray transition-all cursor-pointer text-slate-gray hover:text-ink-black"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Logout
+          </button>
+        </div>
+      </nav>
 
-      <div className="glass-panel" style={{ padding: '1.5rem 2rem', marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Main Workspace Frame */}
+      <div className="max-w-[1000px] mx-auto px-6 py-12 space-y-8">
+        
+        {/* User Identity Banner */}
+        <div className="glass-panel p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-semibold text-slate-gray uppercase">AUTHENTICATED IDENTITY</span>
+            <h3 className="text-xl font-semibold text-ink-black">{user.display_name || user.displayName}</h3>
+            <p className="text-xs text-slate-gray">{user.email}</p>
+            {user.org_id && (
+              <p className="text-[11px] text-slate-gray">
+                Org: <strong className="text-ink-black font-semibold">{user.org_id.name}</strong> ({user.org_id.workspace_code})
+              </p>
+            )}
+          </div>
+          <div className="text-left sm:text-right">
+            <span className="text-[10px] font-mono text-slate-gray uppercase block mb-1">Clearance</span>
+            <span className="text-sm font-semibold bg-ink-black text-white px-3 py-1 rounded-full">{user.role}</span>
+          </div>
+        </div>
+
+        {/* High-Risk Operation Control Panel (Admin Only) */}
+        {user.role === 'Admin' && (
+          <div className="accent-peach-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+            <div className="space-y-1 max-w-xl">
+              <div className="flex items-center gap-2 text-sienna-brown">
+                <Shield className="w-4 h-4" />
+                <h4 className="font-semibold text-base">High-Risk Operation Command</h4>
+              </div>
+              <p className="text-xs text-sienna-brown/85 leading-relaxed">
+                Trigger sensitive workspace commands requiring co-signing consensus authorization under FIDO2 rules.
+              </p>
+            </div>
+            <button 
+              onClick={handleTriggerAction} 
+              disabled={triggering}
+              className="px-6 py-2.5 bg-sienna-brown hover:bg-[#4d2215] text-white rounded-full font-semibold text-xs border-none cursor-pointer transition-colors disabled:opacity-50"
+            >
+              {triggering ? 'Triggering...' : 'Request Database Wipe'}
+            </button>
+          </div>
+        )}
+
+        {/* Cross-Device verification Request Banner */}
+        {authPrompt && (
+          <div className="floating-artifact p-8 border border-[#ececec] text-center space-y-6">
+            <div className="flex items-center justify-center gap-2 text-ink-black">
+              <Activity className="w-5 h-5 text-emerald-500 animate-pulse" />
+              <h3 className="font-semibold text-base">Cross-Device Verification Challenge</h3>
+            </div>
+            <p className="text-xs text-slate-gray max-w-md mx-auto">
+              Select the number matching the login prompt on your other device to authorize biometric credentials validation.
+            </p>
+            
+            <div className="flex justify-center gap-4 flex-wrap">
+              {authPrompt.codeChoices.map(code => (
+                <button 
+                  key={code}
+                  onClick={() => handleApproveLogin(code)}
+                  className="text-2xl font-bold font-mono px-6 py-4 rounded-2xl bg-mist-gray border border-[#ececec] hover:border-ink-black transition-colors cursor-pointer"
+                >
+                  {code}
+                </button>
+              ))}
+            </div>
+            
+            {processStatus && (
+              <p className="text-xs font-mono font-semibold text-emerald-600">
+                {processStatus}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Content Tabs Header */}
+        <div className="flex gap-4 border-b border-[#ececec] pb-2">
+          <button 
+            onClick={() => setActiveTab('approvals')}
+            className={`pb-2 px-1 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'approvals' 
+                ? 'border-ink-black text-ink-black' 
+                : 'border-transparent text-slate-gray hover:text-ink-black'
+            }`}
+          >
+            Authorization Queue
+          </button>
+          <button 
+            onClick={() => setActiveTab('audit')}
+            className={`pb-2 px-1 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'audit' 
+                ? 'border-ink-black text-ink-black' 
+                : 'border-transparent text-slate-gray hover:text-ink-black'
+            }`}
+          >
+            Audit Ledger
+          </button>
+          {user.role === 'Admin' && (
+            <button 
+              onClick={() => { setActiveTab('users'); fetchPendingUsers(); }}
+              className={`pb-2 px-1 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+                activeTab === 'users' 
+                  ? 'border-ink-black text-ink-black' 
+                  : 'border-transparent text-slate-gray hover:text-ink-black'
+              }`}
+            >
+              Workspace Members
+            </button>
+          )}
+        </div>
+
+        {/* Tab panels */}
         <div>
-          <h3 style={{ color: '#e2e8f0', fontSize: '1.2rem' }}>Identity Validated</h3>
-          <p style={{ color: '#94a3b8', marginTop: '0.2rem' }}>{user.display_name || user.displayName} ({user.email})</p>
-          {user.org_id && (
-            <p style={{ color: '#64748b', fontSize: '0.85rem', marginTop: '0.4rem' }}>
-              Workspace: <strong style={{ color: '#818cf8' }}>{user.org_id.name}</strong> ({user.org_id.workspace_code})
-            </p>
+          {activeTab === 'approvals' && <Approvals />}
+          {activeTab === 'audit' && <AuditLog />}
+          {activeTab === 'users' && user.role === 'Admin' && (
+            <div className="glass-panel p-6 space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-ink-black">Workspace Join Requests</h3>
+                <p className="text-xs text-slate-gray mt-1">Review pending member credentials seeking workspace access.</p>
+              </div>
+
+              {pendingUsers.length === 0 ? (
+                <p className="text-sm text-slate-gray text-center py-6 bg-white rounded-xl border border-[#ececec]">
+                  No pending requests.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {pendingUsers.map(member => (
+                    <div key={member.email} className="p-4 bg-white border border-[#ececec] rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <strong className="text-sm text-ink-black font-semibold">{member.display_name}</strong>
+                        <p className="text-xs text-slate-gray font-mono mt-0.5">{member.email}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleApproveUser(member.email, 'Approver')}
+                          className="px-4 py-2 bg-ink-black hover:bg-primary-hover text-white text-xs font-semibold rounded-full cursor-pointer"
+                        >
+                          Approve as Approver
+                        </button>
+                        <button 
+                          onClick={() => handleApproveUser(member.email, 'Admin')}
+                          className="px-4 py-2 border border-ink-black hover:bg-mist-gray text-ink-black text-xs font-semibold rounded-full cursor-pointer"
+                        >
+                          Approve as Admin
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ color: '#cbd5e1', fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '0.2rem' }}>Clearance Level</p>
-          <p style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: '1.1rem' }}>{user.role}</p>
-        </div>
+
       </div>
 
-      {authPrompt && (
-        <div className="glass-panel" style={{ padding: '2.5rem', background: 'rgba(14, 165, 233, 0.08)', border: '1px solid rgba(14, 165, 233, 0.3)', marginBottom: '2rem', transform: 'scale(1.02)', transition: 'all 0.3s ease' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <span style={{ display: 'inline-block', width: '12px', height: '12px', background: '#38bdf8', borderRadius: '50%', boxShadow: '0 0 10px #38bdf8', animation: 'pulse 2s infinite' }}></span>
-            <h3 style={{ color: '#38bdf8', margin: 0 }}>Cross-Device Authentication Request</h3>
-          </div>
-          <p style={{ textAlign: 'center', marginBottom: '2rem', color: '#cbd5e1' }}>Select the number currently displayed on the device requesting access.</p>
-          
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
-            {authPrompt.codeChoices.map(code => (
-              <button 
-                key={code}
-                onClick={() => handleApproveLogin(code)}
-                style={{
-                  fontSize: '2.5rem', fontWeight: 'bold', padding: '1.5rem 2.5rem', borderRadius: '16px',
-                  background: 'rgba(15, 23, 42, 0.8)', color: 'white', border: '1px solid #334155', cursor: 'pointer',
-                  boxShadow: '0 10px 25px rgba(0,0,0,0.5)', transition: 'transform 0.1s'
-                }}
-                onMouseDown={e => e.currentTarget.style.transform = 'scale(0.95)'}
-                onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              >
-                {code}
-              </button>
-            ))}
-          </div>
-          
-          {processStatus && (
-            <p style={{ marginTop: '2rem', textAlign: 'center', color: '#38bdf8', fontWeight: '600', letterSpacing: '0.5px' }}>
-              {processStatus}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Main Content Tabs */}
-      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid #334155', paddingBottom: '1rem' }}>
-        <button 
-          onClick={() => setActiveTab('approvals')}
-          style={{ background: 'none', border: 'none', color: activeTab === 'approvals' ? '#38bdf8' : '#94a3b8', fontSize: '1.1rem', fontWeight: activeTab === 'approvals' ? 'bold' : 'normal', cursor: 'pointer', padding: '0.5rem 1rem' }}
-        >
-          Authorization Queue
-        </button>
-        <button 
-          onClick={() => setActiveTab('audit')}
-          style={{ background: 'none', border: 'none', color: activeTab === 'audit' ? '#38bdf8' : '#94a3b8', fontSize: '1.1rem', fontWeight: activeTab === 'audit' ? 'bold' : 'normal', cursor: 'pointer', padding: '0.5rem 1rem' }}
-        >
-          Audit Ledger
-        </button>
-      </div>
-
-      {activeTab === 'approvals' ? <Approvals/> : <AuditLog/>}
     </div>
   );
 };

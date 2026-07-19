@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { startAuthentication } from '@simplewebauthn/browser';
+import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { startAuthentication } from '@simplewebauthn/browser';
+import { Key, Shield, Check, Clock } from 'lucide-react';
 
 const Approvals = () => {
   const { user } = useAuth();
@@ -16,7 +17,7 @@ const Approvals = () => {
         setRequests(data.requests);
       }
     } catch (err) {
-      console.error('Failed to fetch approvals', err);
+      console.error('Failed to fetch pending approvals', err);
     } finally {
       setLoading(false);
     }
@@ -25,14 +26,16 @@ const Approvals = () => {
   useEffect(() => {
     fetchPending();
 
-    // Listen for live approval updates
+    // Listen to real-time events to update signing counts
     const wsCode = localStorage.getItem('workspaceCode') || '';
-    const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/events?workspaceCode=${wsCode}`, { withCredentials: true });
+    const eventSource = new EventSource(
+      `${import.meta.env.VITE_API_URL}/events?workspaceCode=${wsCode}`, 
+      { withCredentials: true }
+    );
 
     eventSource.onmessage = (event) => {
       const payload = JSON.parse(event.data);
-      if (payload.type === 'APPROVAL_REQUIRED' || payload.type === 'APPROVAL_COMPLETED') {
-        // Refresh the list when a new request arrives or an existing one completes
+      if (payload.type === 'APPROVAL_REQUIRED' || payload.type === 'SIGNATURE_ADDED' || payload.type === 'ACTION_EXECUTED') {
         fetchPending();
       }
     };
@@ -43,16 +46,19 @@ const Approvals = () => {
   const handleSign = async (request) => {
     try {
       setError('');
-      // We use the action payload hash directly as the challenge to bind the signature to the specific transaction
-      const dummyOptions = {
-        challenge: request.actionPayloadHash,
+      
+      const { data: challengeData, ok: challengeOk } = await api.post('/approvals/sign-challenge');
+      if (!challengeOk) throw new Error(challengeData.error || 'Failed to generate signing challenge');
+
+      const signOptions = {
+        challenge: challengeData.challenge,
         rpId: import.meta.env.VITE_RP_ID || window.location.hostname,
-        allowCredentials: [], // Allows any registered credential on this device
+        allowCredentials: [],
         userVerification: 'preferred',
         timeout: 60000,
       };
 
-      const assertion = await startAuthentication(dummyOptions);
+      const assertion = await startAuthentication(signOptions);
 
       const payload = {
         approvalRequestId: request._id,
@@ -63,7 +69,7 @@ const Approvals = () => {
       const { data, ok } = await api.post('/approvals/sign', payload);
 
       if (ok && data.success) {
-        fetchPending(); // Refresh list to update signature count or remove if approved
+        fetchPending();
       } else {
         throw new Error(data.error || 'Failed to submit signature');
       }
@@ -72,49 +78,98 @@ const Approvals = () => {
     }
   };
 
-  if (loading) return <p style={{ color: '#94a3b8' }}>Loading pending approvals...</p>;
+  const handleMockSign = async (request) => {
+    try {
+      setError('');
+      
+      const { data: challengeData, ok: challengeOk } = await api.post('/approvals/sign-challenge');
+      if (!challengeOk) throw new Error(challengeData.error || 'Failed to generate signing challenge');
+
+      const payload = {
+        approvalRequestId: request._id,
+        deviceCredentialId: 'mock-cred-id',
+        signatureValue: JSON.stringify({ mock: true, id: 'mock-cred-id' }),
+      };
+
+      const { data, ok } = await api.post('/approvals/sign', payload);
+
+      if (ok && data.success) {
+        fetchPending();
+      } else {
+        throw new Error(data.error || 'Failed to submit signature');
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  if (loading) return <p className="text-sm text-slate-gray">Loading pending approvals...</p>;
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h3 style={{ color: '#f8fafc' }}>Pending Authorization Requests</h3>
-        <span style={{ background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '0.2rem 0.8rem', borderRadius: '12px', fontSize: '0.85rem' }}>
+    <div className="glass-panel p-6 space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold text-ink-black">Active Authorization Requests</h3>
+          <p className="text-xs text-slate-gray mt-1">Co-sign workspace actions below to authorize execution.</p>
+        </div>
+        <span className="bg-ink-black text-white text-[10px] font-mono px-2 py-0.5 rounded-full">
           {requests.length} Pending
         </span>
       </div>
 
-      {error && <p style={{ color: '#ef4444', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</p>}
+      {error && <p className="text-xs font-semibold text-rose-600 bg-rose-50 p-3 rounded-lg border border-rose-100">{error}</p>}
 
       {requests.length === 0 ? (
-        <p style={{ color: '#64748b', textAlign: 'center', padding: '2rem 0' }}>No pending requests require your signature.</p>
+        <p className="text-sm text-slate-gray text-center py-8 bg-white border border-[#ececec] rounded-2xl">
+          No active co-signing requests found.
+        </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="space-y-4">
           {requests.map(req => {
-            const hasSigned = req.signatures.some(sig => sig.userId === user._id);
+            const hasSigned = req.signatures.some(sig => sig.user_id === user._id);
             
             return (
-              <div key={req._id} style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid #334155', borderRadius: '12px', padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h4 style={{ color: '#e2e8f0', marginBottom: '0.5rem' }}>{req.resourceName}</h4>
-                  <p style={{ color: '#94a3b8', fontSize: '0.85rem', fontFamily: 'monospace' }}>
-                    Hash: {req.actionPayloadHash.substring(0, 16)}...
+              <div key={req._id} className="p-5 bg-white border border-[#ececec] rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-slate-gray transition-colors duration-300">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-ink-black">
+                    <Clock className="w-4 h-4 text-slate-gray" />
+                    <h4 className="font-semibold text-sm">{req.resourceName}</h4>
+                  </div>
+                  <p className="text-[10px] font-mono text-slate-gray">
+                    Payload Hash: {req.actionPayloadHash.substring(0, 20)}...
                   </p>
-                  <div style={{ marginTop: '0.8rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                    <span style={{ background: '#1e293b', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.8rem', color: '#cbd5e1' }}>
-                      Signatures: {req.signatures.length} / {req.requiredCount}
+                  
+                  <div className="flex items-center gap-3 pt-1">
+                    <span className="text-[10px] font-semibold bg-mist-gray text-ink-black px-2 py-0.5 rounded">
+                      Consensus: {req.signatures.length} / {req.requiredCount} Signed
                     </span>
-                    {hasSigned && <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 'bold' }}>✓ Signed</span>}
+                    {hasSigned && (
+                      <span className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Signed
+                      </span>
+                    )}
                   </div>
                 </div>
                 
-                <button 
-                  onClick={() => handleSign(req)}
-                  disabled={hasSigned}
-                  className="btn-primary"
-                  style={{ background: hasSigned ? '#334155' : 'linear-gradient(135deg, #10b981, #059669)', boxShadow: hasSigned ? 'none' : '0 4px 15px rgba(16, 185, 129, 0.4)' }}
-                >
-                  {hasSigned ? 'Waiting on others' : 'Sign & Approve'}
-                </button>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => handleSign(req)}
+                    disabled={hasSigned}
+                    className="btn-primary text-xs"
+                    style={{ padding: '0.5rem 1.2rem' }}
+                  >
+                    {hasSigned ? 'Waiting on others' : 'Sign & Approve'}
+                  </button>
+                  {!hasSigned && (
+                    <button 
+                      onClick={() => handleMockSign(req)}
+                      className="btn-secondary text-xs"
+                      style={{ padding: '0.5rem 1.2rem', borderColor: '#777b86', color: '#777b86' }}
+                    >
+                      Bypass Sign (Mock)
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })}

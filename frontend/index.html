@@ -16,43 +16,32 @@
         theme: {
           extend: {
             colors: {
-              background: 'hsl(var(--background))',
-              foreground: 'hsl(var(--foreground))',
-              muted: {
-                DEFAULT: 'hsl(var(--muted))',
-                foreground: 'hsl(var(--muted-foreground))',
-              },
+              'ink-black': '#17191c',
+              'paper-white': '#ffffff',
+              'mist-gray': '#f2f2f3',
+              'fog-white': '#fafafb',
+              'slate-gray': '#777b86',
+              'ash-gray': '#979799',
+              'smoke-gray': '#a3a6af',
+              'blush-peach': '#fbe1d1',
+              'sienna-brown': '#5d2a1a',
               primary: {
-                DEFAULT: 'hsl(var(--primary))',
-                foreground: 'hsl(var(--primary-foreground))',
+                DEFAULT: '#17191c',
+                foreground: '#ffffff',
               },
               secondary: {
-                DEFAULT: 'hsl(var(--secondary))',
-                foreground: 'hsl(var(--foreground))',
+                DEFAULT: '#f2f2f3',
+                foreground: '#17191c',
               },
               accent: {
-                DEFAULT: 'hsl(var(--accent))',
-                foreground: 'hsl(var(--foreground))',
-              },
-              border: 'hsl(var(--border))',
-              input: 'hsl(var(--input))',
-              zinc: {
-                950: '#09090b',
-                900: '#18181b',
-                800: '#27272a',
-                700: '#3f3f46',
-                600: '#52525b',
-                500: '#71717a',
-                400: '#a1a1aa',
-                300: '#d4d4d8',
-                200: '#e4e4e7',
-                100: '#f4f4f5',
-                50: '#fafafa',
+                DEFAULT: '#fbe1d1',
+                foreground: '#5d2a1a',
               },
             },
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              display: ['Instrument Serif', 'serif'],
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+              serif: ['Instrument Serif', 'Georgia', 'ui-serif', 'serif'],
+              display: ['Instrument Serif', 'Georgia', 'serif'],
               body: ['Inter', 'sans-serif'],
             }
           }
@@ -60,7 +49,7 @@
       }
     </script>
   </head>
-  <body class="bg-zinc-950 text-zinc-50 min-h-screen">
+  <body class="bg-white text-ink-black min-h-screen font-sans">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

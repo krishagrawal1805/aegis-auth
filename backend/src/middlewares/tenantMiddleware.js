@@ -4,8 +4,13 @@ export const resolveTenant = async (req, res, next) => {
   // Check headers, query params, or body
   const workspaceCode = req.headers['x-workspace-code'] || req.query.workspaceCode || req.body.workspaceCode;
 
-  // Let health endpoint bypass tenant resolution
-  if (req.path === '/api/health' || req.path === '/health') {
+  const isBypass = req.path.includes('/auth/org/create') || 
+                   req.path.includes('/auth/org/join') || 
+                   req.path.includes('/auth/register/challenge') ||
+                   req.path === '/api/health' || 
+                   req.path === '/health';
+
+  if (isBypass) {
     return next();
   }
 

@@ -76,32 +76,9 @@ async function runSimulation() {
     await cleanSession(pageA);
     await cleanSession(pageB);
 
-    // 3. Register Admin B (LeadDev) on Browser A
-    const emailB = `admin_b_${Date.now()}@aegis.local`;
-    console.log(`[Simulation] Registering Admin B (${emailB}) on Browser A as LeadDev...`);
-    await pageA.evaluate(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const reg = buttons.find(b => b.textContent.includes('Register Device'));
-      if (reg) reg.click();
-    });
-    await delay(1500);
-
-    await pageA.type('input[placeholder="Workspace Code (e.g. ORG123)"]', 'SIMORG');
-    await pageA.type('input[placeholder="Email Address"]', emailB);
-    await pageA.type('input[placeholder="Display Name"]', 'Admin B (Approver)');
-    await pageA.select('select', 'Approver');
-    await pageA.click('button[type="submit"]');
-    
-    console.log('[Simulation] Waiting for Browser A registration redirect...');
-    await pageA.waitForFunction(
-      () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('Approver'),
-      { timeout: 15000 }
-    );
-    console.log('[Simulation] Admin B (Approver) registered successfully on Browser A.');
-
-    // 4. Register Admin A (SeniorAdmin) on Browser B
+    // 3. Register Admin A (Admin) on Browser B (Creates the Organization)
     const emailA = `admin_a_${Date.now()}@aegis.local`;
-    console.log(`[Simulation] Registering Admin A (${emailA}) on Browser B as SeniorAdmin...`);
+    console.log(`[Simulation] Registering Admin A (${emailA}) on Browser B as Admin...`);
     await pageB.evaluate(() => {
       const buttons = Array.from(document.querySelectorAll('button'));
       const reg = buttons.find(b => b.textContent.includes('Register Device'));
@@ -109,12 +86,12 @@ async function runSimulation() {
     });
     await delay(1500);
 
-    await pageB.type('input[placeholder="Workspace Code (e.g. ORG123)"]', 'SIMORG');
+    await pageB.select('select', 'Admin');
+    await pageB.type('input[placeholder="Organization Name"]', 'Simulation Org');
     await pageB.type('input[placeholder="Email Address"]', emailA);
     await pageB.type('input[placeholder="Display Name"]', 'Admin A (Admin)');
-    await pageB.select('select', 'Admin');
     await pageB.click('button[type="submit"]');
-    
+
     console.log('[Simulation] Waiting for Browser B registration redirect...');
     await pageB.waitForFunction(
       () => document.body.innerText.toLowerCase().includes('clearance level') && document.body.innerText.includes('Admin'),
@@ -122,14 +99,56 @@ async function runSimulation() {
     );
     console.log('[Simulation] Admin A (Admin) registered successfully on Browser B.');
 
-    // 5. Log out Admin B from Browser A to prepare for cross-device check...
-    console.log('[Simulation] Logging out Admin B on Browser A to prepare for cross-device check...');
+    // Extract the generated workspace code
+    const workspaceCode = await pageB.evaluate(() => localStorage.getItem('workspaceCode'));
+    console.log(`[Simulation] Extracted dynamic Workspace Code: ${workspaceCode}`);
+
+    // 4. Register Admin B (Approver) on Browser A (Requests to Join)
+    const emailB = `admin_b_${Date.now()}@aegis.local`;
+    console.log(`[Simulation] Submitting Join Request for Admin B (${emailB}) on Browser A as Approver...`);
     await pageA.evaluate(() => {
-      const btns = Array.from(document.querySelectorAll('button'));
-      const logBtn = btns.find(b => b.innerText.includes('Logout'));
-      if (logBtn) logBtn.click();
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const reg = buttons.find(b => b.textContent.includes('Register Device'));
+      if (reg) reg.click();
     });
-    await delay(2500);
+    await delay(1500);
+
+    await pageA.select('select', 'Approver');
+    await pageA.type('input[placeholder="Workspace Code (e.g. ORG123)"]', workspaceCode);
+    await pageA.type('input[placeholder="Email Address"]', emailB);
+    await pageA.type('input[placeholder="Display Name"]', 'Admin B (Approver)');
+
+    // Dismiss alert dialog upon join success
+    pageA.on('dialog', async dialog => {
+      console.log(`[Simulation] Alert dialog received: ${dialog.message()}`);
+      await dialog.dismiss();
+    });
+
+    await pageA.click('button[type="submit"]');
+
+    console.log('[Simulation] Waiting for Browser A join request submission...');
+    await pageA.waitForFunction(
+      () => document.body.innerText.includes('Join request submitted successfully'),
+      { timeout: 15000 }
+    );
+    console.log('[Simulation] Admin B (Approver) submitted join request successfully.');
+    await delay(3000);
+
+    // 5. Approve Admin B via Admin A's session on Browser B
+    console.log('[Simulation] Approving Admin B via Admin A\'s session...');
+    const approveResult = await pageB.evaluate((email) => {
+      return fetch('http://localhost:8000/api/auth/users/approve', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Workspace-Code': localStorage.getItem('workspaceCode')
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, role: 'Approver' })
+      }).then(r => r.json());
+    }, emailB);
+    console.log('[Simulation] Approve API response:', approveResult);
+    await delay(2000);
 
     // Direct Browser A back to Login view
     console.log('[Simulation] Directing Browser A back to Login view...');
@@ -142,7 +161,7 @@ async function runSimulation() {
 
     // 6. Initiate login for Admin A on Browser A (Cross-Device Flow)
     console.log(`[Simulation] Initiating cross-device login for Admin A (${emailA}) on Browser A...`);
-    await pageA.type('input[placeholder="Workspace Code (6 chars)"]', 'SIMORG');
+    await pageA.type('input[placeholder="Workspace Code (6 chars)"]', workspaceCode);
     await pageA.type('input[placeholder="Email Address"]', emailA);
     await pageA.click('button[type="submit"]');
     await delay(4000);
@@ -214,7 +233,7 @@ async function runSimulation() {
     pageA.on('request', interceptEventsA);
 
     console.log(`[Simulation] Logging in Admin B (${emailB}) locally on Browser A...`);
-    await pageA.type('input[placeholder="Workspace Code (6 chars)"]', 'SIMORG');
+    await pageA.type('input[placeholder="Workspace Code (6 chars)"]', workspaceCode);
     await pageA.type('input[placeholder="Email Address"]', emailB);
     await pageA.click('button[type="submit"]');
 
@@ -249,7 +268,7 @@ async function runSimulation() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-Workspace-Code': 'SIMORG'
+          'X-Workspace-Code': localStorage.getItem('workspaceCode')
         },
         credentials: 'include', // CRITICAL for cross-origin cookies!
         body: JSON.stringify({

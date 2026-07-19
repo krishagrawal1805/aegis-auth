@@ -34,6 +34,7 @@ app.use('/api', resolveTenant);
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/approvals', approvalRoutes);
+app.use('/api/requests', approvalRoutes);
 app.use('/api/events', sseRoutes);
 app.use('/api/audit-logs', auditRoutes);
 

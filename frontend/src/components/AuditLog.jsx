@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
+import { FileText, ShieldAlert, CheckCircle } from 'lucide-react';
 
 const AuditLog = () => {
   const [logs, setLogs] = useState([]);
@@ -35,66 +36,70 @@ const AuditLog = () => {
     return payload && typeof payload === 'object' ? JSON.stringify(payload) : String(payload);
   };
 
-  if (loading) return <p style={{ color: '#94a3b8', marginTop: '2rem' }}>Loading cryptographic ledger...</p>;
+  if (loading) return <p className="text-sm text-slate-gray">Loading cryptographic ledger...</p>;
 
   return (
-    <div className="glass-panel" style={{ padding: '2rem', marginTop: '2rem', overflowX: 'auto' }}>
-      <h3 style={{ color: '#f8fafc', marginBottom: '1.5rem' }}>Immutable Audit Ledger</h3>
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+    <div className="glass-panel p-6 space-y-6 overflow-x-auto">
+      <div>
+        <h3 className="text-lg font-semibold text-ink-black flex items-center gap-2">
+          <FileText className="w-5 h-5 text-slate-gray" />
+          Immutable Audit Ledger
+        </h3>
+        <p className="text-xs text-slate-gray mt-1">Cryptographically verified log entries signed with row-level HMACs.</p>
+      </div>
+
+      <table className="min-w-full">
         <thead>
-          <tr style={{ borderBottom: '1px solid #334155', color: '#94a3b8' }}>
-            <th style={{ padding: '1rem 0.5rem' }}>Timestamp</th>
-            <th style={{ padding: '1rem 0.5rem' }}>Actor</th>
-            <th style={{ padding: '1rem 0.5rem' }}>Action</th>
-            <th style={{ padding: '1rem 0.5rem' }}>Details</th>
-            <th style={{ padding: '1rem 0.5rem' }}>Integrity</th>
-            <th style={{ padding: '1rem 0.5rem' }}>HMAC Signature</th>
+          <tr className="border-b border-[#ececec]">
+            <th className="py-3 px-4 text-xs font-mono font-bold text-slate-gray uppercase">Timestamp</th>
+            <th className="py-3 px-4 text-xs font-mono font-bold text-slate-gray uppercase">Actor</th>
+            <th className="py-3 px-4 text-xs font-mono font-bold text-slate-gray uppercase">Action</th>
+            <th className="py-3 px-4 text-xs font-mono font-bold text-slate-gray uppercase">Details</th>
+            <th className="py-3 px-4 text-xs font-mono font-bold text-slate-gray uppercase">Integrity</th>
+            <th className="py-3 px-4 text-xs font-mono font-bold text-slate-gray uppercase">HMAC Signature</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-[#ececec]/50">
           {logs.map((log) => (
-            <tr key={log._id} style={{ borderBottom: '1px solid rgba(51, 65, 85, 0.5)' }}>
-              <td style={{ padding: '1rem 0.5rem', color: '#cbd5e1', fontSize: '0.85rem' }}>
+            <tr key={log._id} className="hover:bg-[#fafafb] transition-colors duration-200">
+              <td className="py-4 px-4 text-xs text-slate-gray font-mono">
                 {new Date(log.timestamp).toLocaleString()}
               </td>
-              <td style={{ padding: '1rem 0.5rem', color: '#e2e8f0', fontSize: '0.85rem' }}>
+              <td className="py-4 px-4 text-xs text-ink-black">
                 {log.actor_id ? (
                   <div>
-                    <strong>{log.actor_id.display_name}</strong>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{log.actor_id.email}</div>
+                    <strong className="font-semibold">{log.actor_id.display_name}</strong>
+                    <div className="text-[10px] text-slate-gray font-mono">{log.actor_id.email}</div>
                   </div>
                 ) : (
-                  <span style={{ color: '#64748b' }}>System</span>
+                  <span className="text-slate-gray font-mono">System</span>
                 )}
               </td>
-              <td style={{ padding: '1rem 0.5rem' }}>
-                <span style={{ 
-                  background: log.action === 'APPROVAL_GRANTED' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(56, 189, 248, 0.1)', 
-                  color: log.action === 'APPROVAL_GRANTED' ? '#10b981' : '#38bdf8',
-                  padding: '0.3rem 0.6rem', 
-                  borderRadius: '4px', 
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold'
-                }}>
+              <td className="py-4 px-4 text-xs">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  log.action === 'APPROVAL_GRANTED' 
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' 
+                    : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
+                }`}>
                   {log.action}
                 </span>
               </td>
-              <td style={{ padding: '1rem 0.5rem', color: '#e2e8f0', fontSize: '0.9rem' }}>
+              <td className="py-4 px-4 text-xs text-ink-black">
                 {getPayloadDescription(log)}
               </td>
-              <td style={{ padding: '1rem 0.5rem' }}>
+              <td className="py-4 px-4 text-xs">
                 {log.verified ? (
-                  <span style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                    ✓ Intact
+                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 w-max">
+                    <CheckCircle className="w-3 h-3" /> Intact
                   </span>
                 ) : (
-                  <span style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>
-                    ⚠ Tampered
+                  <span className="bg-rose-50 text-rose-700 border border-rose-100 px-2.5 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 w-max">
+                    <ShieldAlert className="w-3 h-3" /> Tampered
                   </span>
                 )}
               </td>
-              <td style={{ padding: '1rem 0.5rem', fontFamily: 'monospace', color: '#64748b', fontSize: '0.8rem' }}>
-                <div style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '120px' }} title={log.hmac_signature}>
+              <td className="py-4 px-4 font-mono text-[10px] text-slate-gray">
+                <div className="max-w-[120px] truncate" title={log.hmac_signature}>
                   {log.hmac_signature}
                 </div>
               </td>
@@ -102,7 +107,7 @@ const AuditLog = () => {
           ))}
           {logs.length === 0 && (
             <tr>
-              <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>Ledger is currently empty.</td>
+              <td colSpan="6" className="text-center py-8 text-sm text-slate-gray">Ledger is empty.</td>
             </tr>
           )}
         </tbody>

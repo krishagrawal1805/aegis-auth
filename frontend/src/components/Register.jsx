@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { startRegistration } from '@simplewebauthn/browser';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { ArrowLeft } from 'lucide-react';
 
 const Register = ({ onNavigate, onBackToHome }) => {
   const { setUser } = useAuth();
@@ -20,24 +21,29 @@ const Register = ({ onNavigate, onBackToHome }) => {
     setLoading(true);
     setStatus('Initializing secure hardware check...');
 
+    const isGenesisAdmin = formData.role === 'Admin';
     const code = formData.workspaceCode.trim().toUpperCase();
-    if (code.length !== 6) {
+
+    if (!isGenesisAdmin && code.length !== 6) {
       setStatus('Error: Workspace code must be exactly 6 characters');
       setLoading(false);
       return;
     }
 
-    try {
-      // Set workspaceCode in localStorage so all subsequent apiFetch calls carry it in the headers
-      localStorage.setItem('workspaceCode', code);
+    if (isGenesisAdmin && !formData.orgName.trim()) {
+      setStatus('Error: Organization Name is required');
+      setLoading(false);
+      return;
+    }
 
+    try {
       // 1. Get challenge from server
       const { data: challengeData, ok: challengeOk } = await api.post('/auth/register/challenge', {
         email: formData.email,
         displayName: formData.displayName,
         role: formData.role,
-        workspaceCode: code,
-        orgName: formData.orgName.trim() || `${code} Org`
+        workspaceCode: isGenesisAdmin ? '' : code,
+        orgName: isGenesisAdmin ? formData.orgName.trim() : ''
       });
       if (!challengeOk) throw new Error(challengeData.error);
 
@@ -53,20 +59,43 @@ const Register = ({ onNavigate, onBackToHome }) => {
 
       setStatus('Verifying cryptographic signature...');
 
-      // 3. Send signature back to server for verification
-      const verifyPayload = {
-        email: formData.email,
-        deviceName: navigator.platform || 'Web Browser',
-        registrationResponse: attestation,
-        workspaceCode: code
-      };
+      // 3. Send signature to either /org/create or /org/join
+      if (isGenesisAdmin) {
+        const verifyPayload = {
+          org_name: formData.orgName.trim(),
+          admin_email: formData.email,
+          admin_name: formData.displayName,
+          registrationResponse: attestation,
+          deviceName: navigator.platform || 'Web Browser'
+        };
+        const { data: verifyData, ok: verifyOk } = await api.post('/auth/org/create', verifyPayload);
+        if (!verifyOk) throw new Error(verifyData.error);
 
-      const { data: verifyData, ok: verifyOk } = await api.post('/auth/register/verify', verifyPayload);
-      if (!verifyOk) throw new Error(verifyData.error);
+        // Save generated workspace code to localStorage
+        localStorage.setItem('workspaceCode', verifyData.workspace_code);
 
-      // 4. Success! Fetch the newly created user session
-      const { data: userData } = await api.get('/auth/me');
-      setUser(userData.user);
+        setStatus('Organization created successfully! Redirecting...');
+        
+        // Fetch user session
+        const { data: userData } = await api.get('/auth/me');
+        setUser(userData.user);
+      } else {
+        const verifyPayload = {
+          workspace_code: code,
+          email: formData.email,
+          display_name: formData.displayName,
+          registrationResponse: attestation,
+          deviceName: navigator.platform || 'Web Browser'
+        };
+        const { data: verifyData, ok: verifyOk } = await api.post('/auth/org/join', verifyPayload);
+        if (!verifyOk) throw new Error(verifyData.error);
+
+        setStatus('Join request submitted successfully. Awaiting Admin approval.');
+        alert('Join request submitted successfully. Awaiting Admin approval.');
+        setTimeout(() => {
+          onNavigate('login');
+        }, 3000);
+      }
 
     } catch (error) {
       localStorage.removeItem('workspaceCode');
@@ -77,70 +106,98 @@ const Register = ({ onNavigate, onBackToHome }) => {
   };
 
   return (
-    <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2rem' }}>
-      <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Register Device</h2>
-      <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+    <div className="glass-panel w-full max-w-[400px] p-8 border border-[#ececec]">
+      <h2 className="text-2xl font-serif text-ink-black text-center mb-6">Register Device</h2>
+      <form onSubmit={handleRegister} className="space-y-4">
+        
+        <div className="space-y-1">
+          <label className="text-[10px] font-mono text-slate-gray uppercase">Choose Security Role</label>
+          <select
+            value={formData.role}
+            onChange={(e) => setFormData({...formData, role: e.target.value})}
+            className="w-full text-sm"
+          >
+            <option value="Requester">Requester (View & Request)</option>
+            <option value="Approver">Approver (Co-sign & Approve)</option>
+            <option value="Admin">Administrator (Create Workspace)</option>
+          </select>
+        </div>
+
+        {formData.role === 'Admin' ? (
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono text-slate-gray uppercase">Organization Name</label>
+            <input
+              type="text"
+              placeholder="e.g. Aegis Corp"
+              value={formData.orgName}
+              onChange={(e) => setFormData({...formData, orgName: e.target.value})}
+              required
+              className="w-full text-sm"
+            />
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono text-slate-gray uppercase">Workspace Code</label>
+            <input
+              type="text"
+              placeholder="e.g. ORG123"
+              value={formData.workspaceCode}
+              onChange={(e) => setFormData({...formData, workspaceCode: e.target.value})}
+              required
+              maxLength={6}
+              className="w-full text-sm uppercase"
+            />
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <label className="text-[10px] font-mono text-slate-gray uppercase">Email Address</label>
           <input
-            type="text"
-            placeholder="Workspace Code (e.g. ORG123)"
-            value={formData.workspaceCode}
-            onChange={(e) => setFormData({...formData, workspaceCode: e.target.value})}
+            type="email"
+            placeholder="e.g. key@aegis.com"
+            value={formData.email}
+            onChange={(e) => setFormData({...formData, email: e.target.value})}
             required
-            maxLength={6}
-            style={{ padding: '0.8rem', borderRadius: '8px', border: 'none', flex: 1, textTransform: 'uppercase' }}
-          />
-          <input
-            type="text"
-            placeholder="Org Name (Optional)"
-            value={formData.orgName}
-            onChange={(e) => setFormData({...formData, orgName: e.target.value})}
-            style={{ padding: '0.8rem', borderRadius: '8px', border: 'none', flex: 1 }}
+            className="w-full text-sm"
           />
         </div>
-        <input
-          type="email"
-          placeholder="Email Address"
-          value={formData.email}
-          onChange={(e) => setFormData({...formData, email: e.target.value})}
-          required
-          style={{ padding: '0.8rem', borderRadius: '8px', border: 'none' }}
-        />
-        <input
-          type="text"
-          placeholder="Display Name"
-          value={formData.displayName}
-          onChange={(e) => setFormData({...formData, displayName: e.target.value})}
-          required
-          style={{ padding: '0.8rem', borderRadius: '8px', border: 'none' }}
-        />
-        <select
-          value={formData.role}
-          onChange={(e) => setFormData({...formData, role: e.target.value})}
-          style={{ padding: '0.8rem', borderRadius: '8px', border: 'none' }}
-        >
-          <option value="Requester">Requester (View & Request)</option>
-          <option value="Approver">Approver (Co-sign & Approve)</option>
-          <option value="Admin">Administrator (Elevated Approvals)</option>
-        </select>
-        <button type="submit" className="btn-primary" disabled={loading}>
-          {loading ? 'Processing...' : 'Register via Passkey'}
+        
+        <div className="space-y-1">
+          <label className="text-[10px] font-mono text-slate-gray uppercase">Display Name</label>
+          <input
+            type="text"
+            placeholder="e.g. Admin Key"
+            value={formData.displayName}
+            onChange={(e) => setFormData({...formData, displayName: e.target.value})}
+            required
+            className="w-full text-sm"
+          />
+        </div>
+
+        <button type="submit" className="btn-primary w-full mt-2" disabled={loading}>
+          {loading ? 'Processing...' : formData.role === 'Admin' ? 'Create Workspace' : 'Request to Join'}
         </button>
       </form>
       
-      <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', textAlign: 'center' }}>
-        <p>
-          Already have an account? <span style={{ color: '#38bdf8', cursor: 'pointer' }} onClick={onNavigate}>Login</span>
+      <div className="mt-6 flex flex-col items-center gap-3 text-xs">
+        <p className="text-slate-gray">
+          Already have an account?{' '}
+          <span 
+            className="text-ink-black font-semibold cursor-pointer underline hover:no-underline" 
+            onClick={onNavigate}
+          >
+            Login here
+          </span>
         </p>
-        <span 
-          className="cursor-pointer text-zinc-500 hover:text-zinc-300 text-xs mt-1 transition-colors"
+        <button 
           onClick={onBackToHome}
-          style={{ cursor: 'pointer', color: '#64748b' }}
+          className="text-slate-gray hover:text-ink-black flex items-center gap-1 bg-transparent border-none cursor-pointer"
         >
-          &larr; Back to Home
-        </span>
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Home
+        </button>
       </div>
-      {status && <p style={{ marginTop: '1rem', color: '#cbd5e1', textAlign: 'center', fontSize: '0.85rem' }}>{status}</p>}
+      {status && <p className="mt-4 text-center text-xs text-slate-gray">{status}</p>}
     </div>
   );
 };

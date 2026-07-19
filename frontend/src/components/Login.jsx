@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { startAuthentication } from '@simplewebauthn/browser';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { Key, Shield, HelpCircle, ArrowLeft } from 'lucide-react';
 
 const Login = ({ onNavigate, onBackToHome }) => {
   const { setUser } = useAuth();
@@ -18,6 +19,32 @@ const Login = ({ onNavigate, onBackToHome }) => {
   useEffect(() => {
     setSessionId(crypto.randomUUID());
   }, []);
+
+  const [timeLeft, setTimeLeft] = useState(180);
+
+  useEffect(() => {
+    if (!verificationCode) return;
+    
+    setTimeLeft(180); // Reset to 3 minutes (180 seconds)
+    const interval = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          if (activeEventSource) {
+            activeEventSource.close();
+          }
+          setVerificationCode(null);
+          setChallengeOptions(null);
+          setStatus('Authentication challenge expired. Please request a new code.');
+          setLoading(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [verificationCode]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -54,7 +81,7 @@ const Login = ({ onNavigate, onBackToHome }) => {
       );
       setActiveEventSource(eventSource);
 
-      setStatus('Cross-device SSE stream connected. Awaiting device biometric authorization...');
+      setStatus('Cross-device stream active. Select the code on your co-signing device...');
 
       eventSource.onmessage = async (event) => {
         const payload = JSON.parse(event.data);
@@ -95,6 +122,39 @@ const Login = ({ onNavigate, onBackToHome }) => {
     }
   };
 
+  const handleMockLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setStatus('Initializing passwordless mock challenge...');
+    const code = workspaceCode.trim().toUpperCase();
+    if (code.length !== 6) {
+      setStatus('Error: Workspace code must be exactly 6 characters');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      localStorage.setItem('workspaceCode', code);
+
+      // Verify immediately using mock flag
+      const verifyRes = await api.post('/auth/login/verify', {
+        email: email.toLowerCase(),
+        workspaceCode: code,
+        authenticationResponse: { mock: true }
+      });
+
+      if (verifyRes.data.success) {
+        const userRes = await api.get('/auth/me');
+        setUser(userRes.data.user);
+      } else {
+        throw new Error(verifyRes.data.error || 'Bypass login failed');
+      }
+    } catch (error) {
+      setStatus(`Bypass Error: ${error.message}`);
+      setLoading(false);
+    }
+  };
+
   // Fallback if cross-device SSE fails or user prefers local login
   const handleLocalAuthentication = async (options, code, wsCode) => {
     try {
@@ -131,73 +191,115 @@ const Login = ({ onNavigate, onBackToHome }) => {
     }
   };
 
+  const handleCancelLogin = () => {
+    if (activeEventSource) {
+      activeEventSource.close();
+    }
+    setVerificationCode(null);
+    setChallengeOptions(null);
+    setStatus('');
+    setLoading(false);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   return (
-    <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2rem', textAlign: 'center' }}>
-      <h2 style={{ marginBottom: '1.5rem' }}>Aegis Secure Login</h2>
+    <div className="glass-panel w-full max-w-[400px] p-8 border border-[#ececec] relative">
+      <h2 className="text-2xl font-serif text-ink-black text-center mb-6">Aegis Secure Login</h2>
 
       {verificationCode ? (
-        <div style={{ padding: '2rem', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', marginBottom: '1.5rem' }}>
-          <p style={{ fontSize: '1rem', color: '#94a3b8', marginBottom: '0.5rem' }}>Verify on your Authenticator App</p>
-          <h1 style={{ fontSize: '4rem', color: '#38bdf8', letterSpacing: '4px' }}>{verificationCode}</h1>
-          <p style={{ marginTop: '1rem', color: '#cbd5e1', fontSize: '0.85rem' }}>{status}</p>
-          <button 
-            type="button" 
-            onClick={triggerLocalAuthManual} 
-            style={{ 
-              marginTop: '1.5rem', 
-              padding: '0.6rem 1rem', 
-              fontSize: '0.8rem', 
-              borderRadius: '6px', 
-              background: 'rgba(255,255,255,0.05)', 
-              color: '#e2e8f0', 
-              border: '1px solid #27272a',
-              cursor: 'pointer',
-              width: '100%',
-              transition: 'background 0.2s'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-            onMouseOut={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-          >
-            Use Local Device Passkey (Backup)
-          </button>
+        <div className="p-6 bg-white border border-[#ececec] rounded-2xl text-center space-y-4">
+          <p className="text-xs text-slate-gray font-mono uppercase tracking-wider">Verification Challenge Code</p>
+          <h1 className="text-5xl font-semibold tracking-wider text-ink-black font-mono my-2">{verificationCode}</h1>
+          
+          <div className="text-xs font-semibold text-rose-600">
+            Expires In: {formatTime(timeLeft)}
+          </div>
+
+          <p className="text-xs text-slate-gray mt-2">{status}</p>
+          
+          <div className="flex flex-col gap-2 pt-2">
+            <button 
+              type="button" 
+              onClick={triggerLocalAuthManual} 
+              className="btn-primary text-xs w-full"
+            >
+              Verify on this Device
+            </button>
+            <button 
+              type="button" 
+              onClick={handleCancelLogin} 
+              className="btn-secondary text-xs w-full"
+              style={{ borderColor: '#777b86', color: '#777b86' }}
+            >
+              Cancel & Resend
+            </button>
+          </div>
         </div>
       ) : (
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <input 
-            type="text" 
-            placeholder="Workspace Code (6 chars)" 
-            value={workspaceCode} 
-            onChange={(e) => setWorkspaceCode(e.target.value)}
-            required 
-            maxLength={6}
-            style={{ padding: '0.8rem', borderRadius: '8px', border: 'none', textTransform: 'uppercase' }}
-          />
-          <input 
-            type="email" 
-            placeholder="Email Address" 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)}
-            required 
-            style={{ padding: '0.8rem', borderRadius: '8px', border: 'none' }}
-          />
-          <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Connecting...' : 'Login'}
-          </button>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono text-slate-gray uppercase">Workspace Code</label>
+            <input 
+              type="text" 
+              placeholder="e.g. ORG123" 
+              value={workspaceCode} 
+              onChange={(e) => setWorkspaceCode(e.target.value)}
+              required 
+              maxLength={6}
+              className="w-full text-sm uppercase"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-[10px] font-mono text-slate-gray uppercase">Email Address</label>
+            <input 
+              type="email" 
+              placeholder="admin@aegis.com" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)}
+              required 
+              className="w-full text-sm"
+            />
+          </div>
+          
+          <div className="flex flex-col gap-2 pt-2">
+            <button type="submit" className="btn-primary w-full" disabled={loading}>
+              {loading ? 'Connecting...' : 'Secure Login'}
+            </button>
+            <button 
+              type="button" 
+              onClick={handleMockLogin} 
+              disabled={loading}
+              className="btn-secondary w-full"
+            >
+              {loading ? 'Connecting...' : 'Bypass Login (Mock)'}
+            </button>
+          </div>
         </form>
       )}
 
       {!verificationCode && (
-        <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem' }}>
-          <p>
-            New device? <span style={{ color: '#38bdf8', cursor: 'pointer' }} onClick={onNavigate}>Register here</span>
+        <div className="mt-6 flex flex-col items-center gap-3 text-xs">
+          <p className="text-slate-gray">
+            Need an account?{' '}
+            <span 
+              className="text-ink-black font-semibold cursor-pointer underline hover:no-underline" 
+              onClick={onNavigate}
+            >
+              Register device
+            </span>
           </p>
-          <span 
-            className="cursor-pointer text-zinc-500 hover:text-zinc-300 text-xs mt-1 transition-colors"
+          <button 
             onClick={onBackToHome}
-            style={{ cursor: 'pointer', color: '#64748b' }}
+            className="text-slate-gray hover:text-ink-black flex items-center gap-1 bg-transparent border-none cursor-pointer"
           >
-            &larr; Back to Home
-          </span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to Home
+          </button>
         </div>
       )}
     </div>
