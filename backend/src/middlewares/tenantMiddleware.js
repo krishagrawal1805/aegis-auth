@@ -7,6 +7,7 @@ export const resolveTenant = async (req, res, next) => {
   const isBypass = req.path.includes('/auth/org/create') || 
                    req.path.includes('/auth/org/join') || 
                    req.path.includes('/auth/register/challenge') ||
+                   req.path.includes('/audit-logs') ||
                    req.path === '/api/health' || 
                    req.path === '/health';
 

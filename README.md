@@ -27,6 +27,10 @@ Critical operations (e.g., production database actions) require **multiple admin
 ### 📜 Cryptographic Audit Ledger
 Every security event is recorded in a **blockchain-style tamper-evident chain**. Each log entry contains the SHA-256 hash of the previous entry — if any record is modified or deleted, the chain breaks.
 
+### 👥 Workspace Roster & Active Guardians Directory
+A real-time, multi-tenant isolated roster displaying all verified team credentials inside the workspace. It features role badges and dynamic online/offline connection state indicators powered by Server-Sent Events (SSE) session tracking.
+
+
 ---
 
 ## Architecture

@@ -2,7 +2,7 @@ import { AuditLog } from '../models/models.js';
 
 export const getAuditLogs = async (req, res) => {
   try {
-    const orgId = req.orgId;
+    const orgId = req.orgId || req.user?.orgId;
     const serverSecret = process.env.HMAC_SECRET || 'aegis-hackathon-super-secret-audit-key-2026';
 
     // Query logs belonging strictly to this tenant org, sorted by timestamp descending

@@ -12,6 +12,8 @@ const Dashboard = () => {
   const [processStatus, setProcessStatus] = useState('');
   const [activeTab, setActiveTab] = useState('approvals'); // 'approvals' | 'audit' | 'users'
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [roster, setRoster] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(true);
   const [triggering, setTriggering] = useState(false);
 
   const fetchPendingUsers = async () => {
@@ -25,9 +27,26 @@ const Dashboard = () => {
     }
   };
 
+  const fetchRoster = async () => {
+    setRosterLoading(true);
+    try {
+      const { data, ok } = await api.get('/auth/org/members');
+      if (ok && data.success) {
+        setRoster(data.members);
+      }
+    } catch (err) {
+      console.error('Failed to fetch workspace roster', err);
+    } finally {
+      setRosterLoading(false);
+    }
+  };
+
   useEffect(() => {
-    if (user && user.role === 'Admin') {
-      fetchPendingUsers();
+    if (user) {
+      fetchRoster();
+      if (user.role === 'Admin') {
+        fetchPendingUsers();
+      }
     }
   }, [user]);
 
@@ -57,6 +76,7 @@ const Dashboard = () => {
       if (ok && data.success) {
         alert('User approved successfully!');
         fetchPendingUsers();
+        fetchRoster();
       } else {
         alert(data.error || 'Failed to approve user');
       }
@@ -83,6 +103,7 @@ const Dashboard = () => {
       setTriggering(false);
     }
   };
+
 
   const handleApproveLogin = async (selectedCode) => {
     setProcessStatus('Verifying biometrics...');
@@ -234,59 +255,113 @@ const Dashboard = () => {
           >
             Audit Ledger
           </button>
-          {user.role === 'Admin' && (
-            <button 
-              onClick={() => { setActiveTab('users'); fetchPendingUsers(); }}
-              className={`pb-2 px-1 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
-                activeTab === 'users' 
-                  ? 'border-ink-black text-ink-black' 
-                  : 'border-transparent text-slate-gray hover:text-ink-black'
-              }`}
-            >
-              Workspace Members
-            </button>
-          )}
+          <button 
+            onClick={() => { setActiveTab('users'); fetchRoster(); if (user.role === 'Admin') fetchPendingUsers(); }}
+            className={`pb-2 px-1 text-sm font-semibold border-b-2 transition-all cursor-pointer ${
+              activeTab === 'users' 
+                ? 'border-ink-black text-ink-black' 
+                : 'border-transparent text-slate-gray hover:text-ink-black'
+            }`}
+          >
+            Workspace Members
+          </button>
         </div>
 
         {/* Tab panels */}
         <div>
           {activeTab === 'approvals' && <Approvals />}
           {activeTab === 'audit' && <AuditLog />}
-          {activeTab === 'users' && user.role === 'Admin' && (
-            <div className="glass-panel p-6 space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-ink-black">Workspace Join Requests</h3>
-                <p className="text-xs text-slate-gray mt-1">Review pending member credentials seeking workspace access.</p>
+          {activeTab === 'users' && (
+            <div className="space-y-6">
+              {/* Workspace Roster (All Authenticated Users) */}
+              <div className="glass-panel p-6 space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold text-ink-black">Active Workspace Guardians</h3>
+                    <p className="text-xs text-slate-gray mt-1">Immutable directory of verified team credentials inside this tenant workspace.</p>
+                  </div>
+                  <span className="bg-ink-black text-white text-[10px] font-mono px-2 py-0.5 rounded-full">
+                    {roster.length} Guardians
+                  </span>
+                </div>
+
+                {rosterLoading ? (
+                  <p className="text-sm text-slate-gray">Verifying registry...</p>
+                ) : (
+                  <div className="divide-y divide-[#ececec]/50">
+                    {roster.map((member, idx) => (
+                      <div key={idx} className="py-3 flex justify-between items-center text-sm">
+                        <div>
+                          <strong className="font-semibold text-ink-black">{member.display_name}</strong>
+                          <div className="text-[10px] text-slate-gray font-mono">{member.email}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            member.online 
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                              : 'bg-slate-50 text-slate-500 border-slate-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${member.online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                            {member.online ? 'Online' : 'Offline'}
+                          </span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                            member.role === 'Admin' 
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-100' 
+                              : 'bg-cyan-50 text-cyan-700 border-cyan-100'
+                          }`}>
+                            {member.role}
+                          </span>
+                          <span className="bg-mist-gray text-slate-gray border border-[#ececec] px-2 py-0.5 rounded-full text-[10px] font-mono">
+                            Account: {member.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {roster.length === 0 && (
+                      <p className="text-sm text-slate-gray text-center py-6">No workspace members found.</p>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {pendingUsers.length === 0 ? (
-                <p className="text-sm text-slate-gray text-center py-6 bg-white rounded-xl border border-[#ececec]">
-                  No pending requests.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {pendingUsers.map(member => (
-                    <div key={member.email} className="p-4 bg-white border border-[#ececec] rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                      <div>
-                        <strong className="text-sm text-ink-black font-semibold">{member.display_name}</strong>
-                        <p className="text-xs text-slate-gray font-mono mt-0.5">{member.email}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button 
-                          onClick={() => handleApproveUser(member.email, 'Approver')}
-                          className="px-4 py-2 bg-ink-black hover:bg-primary-hover text-white text-xs font-semibold rounded-full cursor-pointer"
-                        >
-                          Approve as Approver
-                        </button>
-                        <button 
-                          onClick={() => handleApproveUser(member.email, 'Admin')}
-                          className="px-4 py-2 border border-ink-black hover:bg-mist-gray text-ink-black text-xs font-semibold rounded-full cursor-pointer"
-                        >
-                          Approve as Admin
-                        </button>
-                      </div>
+              {/* Workspace Join Requests (Admin Only) */}
+              {user.role === 'Admin' && (
+                <div className="glass-panel p-6 space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-ink-black">Workspace Join Requests</h3>
+                    <p className="text-xs text-slate-gray mt-1">Review pending member credentials seeking workspace access.</p>
+                  </div>
+
+                  {pendingUsers.length === 0 ? (
+                    <p className="text-sm text-slate-gray text-center py-6 bg-white rounded-xl border border-[#ececec]">
+                      No pending requests.
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {pendingUsers.map(member => (
+                        <div key={member.email} className="p-4 bg-white border border-[#ececec] rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div>
+                            <strong className="text-sm text-ink-black font-semibold">{member.display_name}</strong>
+                            <p className="text-xs text-slate-gray font-mono mt-0.5">{member.email}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button 
+                              onClick={() => handleApproveUser(member.email, 'Approver')}
+                              className="px-4 py-2 bg-ink-black hover:bg-primary-hover text-white text-xs font-semibold rounded-full cursor-pointer"
+                            >
+                              Approve as Approver
+                            </button>
+                            <button 
+                              onClick={() => handleApproveUser(member.email, 'Admin')}
+                              className="px-4 py-2 border border-ink-black hover:bg-mist-gray text-ink-black text-xs font-semibold rounded-full cursor-pointer"
+                            >
+                              Approve as Admin
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>

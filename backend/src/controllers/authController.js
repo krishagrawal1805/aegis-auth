@@ -455,3 +455,31 @@ export const getPendingUsers = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+export const getOrgMembers = async (req, res) => {
+  try {
+    const tenantId = req.user.orgId;
+    if (!tenantId) {
+      return res.status(400).json({ success: false, error: 'No organization context found in session.' });
+    }
+
+    const members = await User.find({ org_id: tenantId })
+      .select('email display_name role status')
+      .lean();
+
+    const membersWithOnlineStatus = members.map(m => ({
+      email: m.email,
+      display_name: m.display_name,
+      role: m.role,
+      status: m.status,
+      online: sseStore.isUserOnline(m._id)
+    }));
+
+    res.status(200).json({ success: true, members: membersWithOnlineStatus });
+  } catch (error) {
+    console.error('Workspace roster fetch error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+

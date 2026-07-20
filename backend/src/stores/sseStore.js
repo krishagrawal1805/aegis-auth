@@ -56,5 +56,12 @@ export const sseStore = {
         res.write(`data: ${JSON.stringify({ type: eventType, ...payload })}\n\n`);
       }
     }
+  },
+
+  isUserOnline: (userId) => {
+    if (!userId) return false;
+    const idStr = userId.toString();
+    const connectionSet = userConnections.get(idStr);
+    return connectionSet ? connectionSet.size > 0 : false;
   }
 };

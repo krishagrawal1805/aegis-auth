@@ -10,7 +10,8 @@ import {
   orgCreate,
   orgJoin,
   approveUser,
-  getPendingUsers
+  getPendingUsers,
+  getOrgMembers
 } from '../controllers/authController.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 
@@ -23,6 +24,7 @@ router.post('/org/create', orgCreate);
 router.post('/org/join', orgJoin);
 router.get('/users/pending', requireAuth, getPendingUsers);
 router.post('/users/approve', requireAuth, approveUser);
+router.get('/org/members', requireAuth, getOrgMembers);
 
 router.post('/login/challenge', loginChallenge);
 router.post('/login/verify', loginVerify);
